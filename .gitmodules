@@ -1,0 +1,3 @@
+[submodule "ext/ogmios"]
+	path = ext/ogmios
+	url = https://github.com/CardanoSolutions/ogmios.git
