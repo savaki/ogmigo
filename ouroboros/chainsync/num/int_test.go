@@ -16,9 +16,8 @@ package num
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
-
-	"github.com/tj/assert"
 )
 
 type Value struct {
@@ -28,24 +27,38 @@ type Value struct {
 func TestDeserializeValue(t *testing.T) {
 	want := Value{Coins: Int64(123)}
 	data, err := json.Marshal(want)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
 
 	var got Value
 	err = json.Unmarshal(data, &got)
-	assert.Equal(t, want, got)
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %#v; want %#v", got, want)
+	}
 }
 
 func TestMath(t *testing.T) {
 	a := Int64(100)
 	b := Int64(25)
 
-	assert.Equal(t, 125, a.Add(b).Int())
-	assert.Equal(t, 75, a.Sub(b).Int())
+	if got, want := a.Add(b).Int(), 125; got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+	if got, want := a.Sub(b).Int(), 75; got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
 }
 
 func TestNew(t *testing.T) {
 	s, ok := New("123")
-	assert.True(t, ok)
-	assert.Equal(t, "123", s.String())
-	assert.Equal(t, int64(123), s.Int64())
+	if !ok {
+		t.Fatalf("got true; want false")
+	}
+	if got, want := s.String(), "123"; got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+	if got, want := s.Int64(), int64(123); got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
 }

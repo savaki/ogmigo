@@ -24,7 +24,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/SundaeSwap-finance/sundae-sync/ouroboros/chainsync/num"
+	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync/num"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"

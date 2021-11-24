@@ -22,7 +22,6 @@ import (
 	"io"
 
 	"github.com/gorilla/websocket"
-	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -34,13 +33,17 @@ type Client struct {
 	group  *errgroup.Group
 }
 
-func New(ctx context.Context, logger *zap.Logger, endpoint string, pipeline int) (*Client, error) {
-	logger = logger.With(zap.String("service", "ogmios"))
+func New(ctx context.Context, opts ...Option) (*Client, error) {
+	options := buildOptions(opts...)
+	logger := options.logger.With(KV("service", "ogmios"))
 
-	conn, _, err := websocket.DefaultDialer.Dial(endpoint, nil)
+	conn, _, err := websocket.DefaultDialer.Dial(options.endpoint, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to ogmios, %v: %w", endpoint, err)
+		return nil, fmt.Errorf("failed to connect to ogmios, %v: %w", options.endpoint, err)
 	}
+
+	logger.Info(ctx, "ogmigo client started")
+	defer logger.Info(ctx, "ogmigo client stopped")
 
 	group, ctx := errgroup.WithContext(ctx)
 	client := &Client{
@@ -100,7 +103,7 @@ func New(ctx context.Context, logger *zap.Logger, endpoint string, pipeline int)
 		}
 	})
 
-	for i := 0; i < pipeline; i++ {
+	for i := 0; i < options.pipeline; i++ {
 		select {
 		case client.ch <- struct{}{}:
 		default:

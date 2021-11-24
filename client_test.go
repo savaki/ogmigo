@@ -19,13 +19,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"sync/atomic"
 	"testing"
 
-	"github.com/SundaeSwap-finance/sundae-sync/ouroboros/chainsync"
-	"github.com/tj/assert"
-	"go.uber.org/zap"
+	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -37,20 +36,23 @@ func TestClient_ReadNext(t *testing.T) {
 	}
 
 	var (
-		ctx       = context.Background()
-		logger, _ = zap.NewDevelopment()
-		p         = message.NewPrinter(language.English)
-		counter   int64
-		read      int64
+		ctx     = context.Background()
+		p       = message.NewPrinter(language.English)
+		counter int64
+		read    int64
 	)
 
-	client, err := New(ctx, logger, endpoint, 50)
-	assert.Nil(t, err)
+	client, err := New(ctx)
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
 	defer client.Close()
 
 	for {
 		data, err := client.ReadNext(ctx)
-		assert.Nil(t, err)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
 
 		var response chainsync.Response
 		decoder := json.NewDecoder(bytes.NewReader(data)) // use decoder to check for unknown fields
@@ -59,7 +61,9 @@ func TestClient_ReadNext(t *testing.T) {
 		if err != nil {
 			fmt.Println(string(data))
 		}
-		assert.Nil(t, err)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
 
 		read += int64(len(data))
 		if v := atomic.AddInt64(&counter, 1); v%1e3 == 0 {
@@ -69,11 +73,7 @@ func TestClient_ReadNext(t *testing.T) {
 					blockNo = ps.BlockNo
 				}
 			}
-			logger.Info("read",
-				zap.Uint64("block", blockNo),
-				zap.String("n", p.Sprintf("%d", v)),
-				zap.String("read", p.Sprintf("%d", read)),
-			)
+			log.Printf("read: block=%v, n=%v, read=%v", blockNo, p.Sprintf("%d", v), p.Sprintf("%d", read))
 		}
 	}
 }
