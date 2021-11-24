@@ -17,7 +17,7 @@ package chainsync
 import (
 	"encoding/json"
 
-	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync/num"
+	"github.com/savaki/ogmigo/ouroboros/chainsync/num"
 )
 
 type ByronBlock struct {

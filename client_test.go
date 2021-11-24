@@ -24,7 +24,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
+	"github.com/savaki/ogmigo/ouroboros/chainsync"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
