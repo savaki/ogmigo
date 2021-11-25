@@ -16,8 +16,6 @@ package chainsync
 
 import (
 	"encoding/json"
-
-	"github.com/savaki/ogmigo/ouroboros/chainsync/num"
 )
 
 type ByronBlock struct {
@@ -33,7 +31,7 @@ type ByronBody struct {
 }
 
 type ByronHeader struct {
-	BlockHeight     num.Int `json:"blockHeight,omitempty"`
+	BlockHeight     uint64 `json:"blockHeight,omitempty"`
 	GenesisKey      string
 	Epoch           uint32
 	Proof           json.RawMessage
@@ -41,7 +39,7 @@ type ByronHeader struct {
 	ProtocolMagicId uint64
 	ProtocolVersion ProtocolVersion
 	Signature       json.RawMessage
-	Slot            num.Int `json:"slot,omitempty"`
+	Slot            uint64 `json:"slot,omitempty"`
 	SoftwareVersion map[string]interface{}
 }
 

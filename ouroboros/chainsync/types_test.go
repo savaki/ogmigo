@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -298,5 +299,38 @@ func TestTxID_Index(t *testing.T) {
 func TestTxID_TxHash(t *testing.T) {
 	if got, want := TxID("a#3").TxHash(), "a"; got != want {
 		t.Fatalf("got %v; want %v", got, want)
+	}
+}
+
+func TestPoints_Sort(t *testing.T) {
+	s1 := PointString("1").Point()
+	s2 := PointString("2").Point()
+	p1 := PointStruct{Slot: 10}.Point()
+	p2 := PointStruct{Slot: 10}.Point()
+	tests := map[string]struct {
+		Input Points
+		Want  Points
+	}{
+		"string": {
+			Input: Points{s1, s2},
+			Want:  Points{s2, s1},
+		},
+		"points": {
+			Input: Points{p1, p2},
+			Want:  Points{p2, p1},
+		},
+		"mixed": {
+			Input: Points{s1, p1, s2, p2},
+			Want:  Points{p2, p1, s2, s1},
+		},
+	}
+	for label, tc := range tests {
+		t.Run(label, func(t *testing.T) {
+			got := tc.Input
+			sort.Sort(got)
+			if !reflect.DeepEqual(got, tc.Want) {
+				t.Fatalf("got %#v; want %#v", got, tc.Want)
+			}
+		})
 	}
 }

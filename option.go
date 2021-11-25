@@ -1,10 +1,11 @@
-package ogmios
+package ogmigo
 
 // Options available to ogmios client
 type Options struct {
-	endpoint string
-	logger   Logger
-	pipeline int
+	endpoint     string
+	logger       Logger
+	pipeline     int
+	saveInterval uint64
 }
 
 // Option to cardano client
@@ -14,6 +15,13 @@ type Option func(*Options)
 func WithEndpoint(endpoint string) Option {
 	return func(opts *Options) {
 		opts.endpoint = endpoint
+	}
+}
+
+// WithInterval specifies how frequently to save checkpoints when reading
+func WithInterval(n int) Option {
+	return func(options *Options) {
+		options.saveInterval = uint64(n)
 	}
 }
 
@@ -44,6 +52,9 @@ func buildOptions(opts ...Option) Options {
 	}
 	if options.pipeline <= 0 {
 		options.pipeline = 50
+	}
+	if options.saveInterval <= 0 {
+		options.saveInterval = 2160
 	}
 	return options
 }

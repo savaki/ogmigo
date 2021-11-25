@@ -125,6 +125,8 @@ const (
 	PointTypeStruct PointType = 2
 )
 
+var Origin = PointString("origin").Point()
+
 type PointString string
 
 func (p PointString) Point() Point {
@@ -140,10 +142,10 @@ type PointStruct struct {
 	Slot    uint64 `json:"slot,omitempty"    dynamodbav:"slot,omitempty"`
 }
 
-func (p *PointStruct) Point() Point {
+func (p PointStruct) Point() Point {
 	return Point{
 		pointType:   PointTypeStruct,
-		pointStruct: p,
+		pointStruct: &p,
 	}
 }
 
@@ -151,6 +153,24 @@ type Point struct {
 	pointType   PointType
 	pointString PointString
 	pointStruct *PointStruct
+}
+
+type Points []Point
+
+func (pp Points) Len() int      { return len(pp) }
+func (pp Points) Swap(i, j int) { pp[i], pp[j] = pp[j], pp[i] }
+func (pp Points) Less(i, j int) bool {
+	pi, pj := pp[i], pp[j]
+	switch {
+	case pi.pointType == PointTypeStruct && pj.pointType == PointTypeStruct:
+		return pi.pointStruct.Slot > pj.pointStruct.Slot
+	case pi.pointType == PointTypeStruct:
+		return true
+	case pj.pointType == PointTypeStruct:
+		return false
+	default:
+		return pi.pointString > pj.pointString
+	}
 }
 
 // pointCBOR provide simplified internal wrapper

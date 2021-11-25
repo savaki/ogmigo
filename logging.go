@@ -1,4 +1,4 @@
-package ogmios
+package ogmigo
 
 import (
 	"bytes"
