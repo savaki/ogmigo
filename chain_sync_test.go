@@ -42,14 +42,14 @@ func TestClient_ReadNext(t *testing.T) {
 		read    int64
 	)
 
-	client, err := New(ctx)
+	client, err := NewChainSyncClient(ctx)
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
 	defer client.Close()
 
 	for {
-		data, err := client.ReadNext(ctx)
+		data, err := client.ReadNextMessage(ctx)
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}

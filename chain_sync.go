@@ -22,10 +22,12 @@ import (
 	"io"
 
 	"github.com/gorilla/websocket"
+	"github.com/savaki/ogmigo/ouroboros/chainsync"
 	"golang.org/x/sync/errgroup"
 )
 
-type Client struct {
+// ChainSyncClient provides a client for the chain sync protocol only
+type ChainSyncClient struct {
 	blocks chan json.RawMessage
 	ch     chan struct{}
 	conn   *websocket.Conn
@@ -33,7 +35,8 @@ type Client struct {
 	group  *errgroup.Group
 }
 
-func New(ctx context.Context, opts ...Option) (*Client, error) {
+// NewChainSyncClient returns a new ChainSyncClient
+func NewChainSyncClient(ctx context.Context, opts ...Option) (*ChainSyncClient, error) {
 	options := buildOptions(opts...)
 	logger := options.logger.With(KV("service", "ogmios"))
 
@@ -46,7 +49,7 @@ func New(ctx context.Context, opts ...Option) (*Client, error) {
 	defer logger.Info(ctx, "ogmigo client stopped")
 
 	group, ctx := errgroup.WithContext(ctx)
-	client := &Client{
+	client := &ChainSyncClient{
 		blocks: make(chan json.RawMessage, 8),
 		ch:     make(chan struct{}, 64),
 		tip:    make(chan struct{}, 1),
@@ -113,16 +116,35 @@ func New(ctx context.Context, opts ...Option) (*Client, error) {
 	return client, nil
 }
 
-func (c *Client) Blocks() <-chan json.RawMessage {
+// Blocks retrieves the next block encoded as JSON
+func (c *ChainSyncClient) Blocks() <-chan json.RawMessage {
 	return c.blocks
 }
 
-func (c *Client) Close() error {
+// Close the client
+func (c *ChainSyncClient) Close() error {
 	defer c.group.Wait()
 	return c.conn.Close()
 }
 
-func (c *Client) ReadNext(ctx context.Context) (json.RawMessage, error) {
+// ReadNext returns the next chainsync.Response
+func (c *ChainSyncClient) ReadNext(ctx context.Context) (chainsync.Response, error) {
+	message, err := c.ReadNextMessage(ctx)
+	if err != nil {
+		return chainsync.Response{}, nil
+	}
+
+	var response chainsync.Response
+	if err := json.Unmarshal(message, &response); err != nil {
+		return chainsync.Response{}, fmt.Errorf("failed to read next: %w", err)
+	}
+
+	return response, nil
+}
+
+// ReadNextMessage returns the next message for those cases where
+// unmarshalling the content isn't required
+func (c *ChainSyncClient) ReadNextMessage(ctx context.Context) (json.RawMessage, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -131,6 +153,6 @@ func (c *Client) ReadNext(ctx context.Context) (json.RawMessage, error) {
 	}
 }
 
-func (c *Client) Tip() <-chan struct{} {
+func (c *ChainSyncClient) Tip() <-chan struct{} {
 	return c.tip
 }
