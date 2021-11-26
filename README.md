@@ -1,7 +1,7 @@
 ogmigo
 -------------------------
 
-`ogmigo` is a go client for [ogmios](https://ogmios.dev).  
+`ogmigo` is a go client for [ogmios](https://ogmios.dev).
 
 This library is under heavy development, use at your own risk.
 
@@ -25,18 +25,18 @@ func example(ctx context.Context) error {
 	wait, err := client.ChainSync(ctx, callback)
 	if err != nil {
 		return err
-    }
-	if err := wait() ; err != nil {
+	}
+	if err := wait(); err != nil {
 		return err
-    }
-	
+	}
+
 	return nil
 }
 ```
 
 ### Submodules
 
-`ogmigo` imports `ogmios` as a submodule for testing purposes.  To fetch the submodules,
+`ogmigo` imports `ogmios` as a submodule for testing purposes. To fetch the submodules,
 
 ```bash
 git submodule update --init --recursive
