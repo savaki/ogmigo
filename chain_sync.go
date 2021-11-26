@@ -20,7 +20,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"sort"
+	"sync/atomic"
 
 	"github.com/gorilla/websocket"
 	"github.com/savaki/ogmigo/ouroboros/chainsync"
@@ -64,10 +66,16 @@ func WithStore(store Store) ChainSyncOption {
 	}
 }
 
+type closeFunc func() error
+
+func (fn closeFunc) Close() error {
+	return fn()
+}
+
 // ChainSync replays the blockchain by invoking the callback for each block
 // By default, ChainSync stores no checkpoints and always restarts from origin.  These can
 // be overridden via WithPoints and WithStore
-func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...ChainSyncOption) (func() error, error) {
+func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...ChainSyncOption) (io.Closer, error) {
 	options := buildChainSyncOptions(opts...)
 
 	conn, _, err := websocket.DefaultDialer.Dial(c.options.endpoint, nil)
@@ -80,6 +88,7 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 		return nil, fmt.Errorf("failed to create init message: %w", err)
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
 		c.options.logger.Info("ogmigo chainsync started")
@@ -87,9 +96,16 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 		<-ctx.Done()
 		return nil
 	})
+
+	var connState int64 // 0 - open, 1 - closing, 2 - closed
 	group.Go(func() error {
 		<-ctx.Done()
-		return conn.Close()
+		atomic.AddInt64(&connState, 1)
+		if err := conn.Close(); err != nil {
+			return err
+		}
+		atomic.AddInt64(&connState, 1)
+		return nil
 	})
 
 	// prime the pump
@@ -103,7 +119,12 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 
 	group.Go(func() error {
 		if err := conn.WriteMessage(websocket.TextMessage, init); err != nil {
-			fmt.Printf("WriteMessage: %T\n", err)
+			var oe *net.OpError
+			if ok := errors.As(err, &oe); ok {
+				if v := atomic.LoadInt64(&connState); v > 0 {
+					return nil // connection closed
+				}
+			}
 			return fmt.Errorf("failed to write FindIntersect: %w", err)
 		}
 
@@ -125,9 +146,14 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 		for n := uint64(1); ; n++ {
 			messageType, data, err := conn.ReadMessage()
 			if err != nil {
-				fmt.Printf("ReadMessage: 	%T\n", err)
 				if errors.Is(err, io.EOF) {
 					return nil
+				}
+				var oe *net.OpError
+				if ok := errors.As(err, &oe); ok {
+					if v := atomic.LoadInt64(&connState); v > 0 {
+						return nil // connection closed
+					}
 				}
 				return fmt.Errorf("failed to read message from ogmios: %w", err)
 			}
@@ -188,7 +214,18 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 		}
 	})
 
-	return group.Wait, nil
+	shutdown := func() error {
+		c.options.logger.Info("ogmigo shutdown requested")
+		defer c.options.logger.Info("ogmigo shutdown completed")
+
+		cancel()
+		if err := group.Wait(); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	return closeFunc(shutdown), nil
 }
 
 func getInit(ctx context.Context, store Store, points ...chainsync.Point) (data []byte, err error) {

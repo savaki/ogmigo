@@ -22,11 +22,11 @@ func example(ctx context.Context) error {
 	}
 
 	client := ogmigo.New(ogmigo.WithEndpoint("ws://example.com:1337"))
-	wait, err := client.ChainSync(ctx, callback)
+	closer, err := client.ChainSync(ctx, callback)
 	if err != nil {
 		return err
 	}
-	if err := wait(); err != nil {
+	if err := closer.Close(); err != nil {
 		return err
 	}
 

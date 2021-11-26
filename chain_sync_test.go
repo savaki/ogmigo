@@ -70,11 +70,13 @@ func TestClient_ChainSync(t *testing.T) {
 		return nil
 	}
 
-	wait, err := client.ChainSync(ctx, callback, WithStore(echoStore{}))
+	closer, err := client.ChainSync(ctx, callback, WithStore(echoStore{}))
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
-	if err := wait(); err != nil {
+
+	<-time.After(5 * time.Second)
+	if err := closer.Close(); err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
 }
