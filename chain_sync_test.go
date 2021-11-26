@@ -31,7 +31,6 @@ import (
 
 func TestClient_ChainSync(t *testing.T) {
 	endpoint := os.Getenv("OGMIOS")
-	//endpoint = "ws://100.99.230.19:11337"
 	if endpoint == "" {
 		t.SkipNow()
 	}
@@ -71,7 +70,7 @@ func TestClient_ChainSync(t *testing.T) {
 		return nil
 	}
 
-	wait, err := client.ChainSync(ctx, echoStore{}, callback)
+	wait, err := client.ChainSync(ctx, callback, WithStore(echoStore{}))
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}

@@ -30,13 +30,52 @@ import (
 // ChainSyncFunc callback containing json encoded chainsync.Response
 type ChainSyncFunc func(ctx context.Context, data []byte) error
 
-func (c *Client) ChainSync(ctx context.Context, store Store, callback ChainSyncFunc, points ...chainsync.Point) (func() error, error) {
+// ChainSyncOptions configuration parameters
+type ChainSyncOptions struct {
+	points chainsync.Points
+	store  Store
+}
+
+func buildChainSyncOptions(opts ...ChainSyncOption) ChainSyncOptions {
+	var options ChainSyncOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
+	if options.store == nil {
+		options.store = nopStore{}
+	}
+	return options
+}
+
+// ChainSyncOption provides functional options for ChainSync
+type ChainSyncOption func(opts *ChainSyncOptions)
+
+// WithPoints allows starting from an optional point
+func WithPoints(points ...chainsync.Point) ChainSyncOption {
+	return func(opts *ChainSyncOptions) {
+		opts.points = points
+	}
+}
+
+// WithStore specifies store to persist points to; defaults to no persistence
+func WithStore(store Store) ChainSyncOption {
+	return func(opts *ChainSyncOptions) {
+		opts.store = store
+	}
+}
+
+// ChainSync replays the blockchain by invoking the callback for each block
+// By default, ChainSync stores no checkpoints and always restarts from origin.  These can
+// be overridden via WithPoints and WithStore
+func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...ChainSyncOption) (func() error, error) {
+	options := buildChainSyncOptions(opts...)
+
 	conn, _, err := websocket.DefaultDialer.Dial(c.options.endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to ogmios, %v: %w", c.options.endpoint, err)
 	}
 
-	init, err := getInit(ctx, store, points...)
+	init, err := getInit(ctx, options.store, options.points...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create init message: %w", err)
 	}
@@ -96,7 +135,7 @@ func (c *Client) ChainSync(ctx context.Context, store Store, callback ChainSyncF
 			select {
 			case <-ctx.Done():
 				if point, ok := getPoint(last.list()...); ok {
-					if err := store.Save(context.Background(), point); err != nil {
+					if err := options.store.Save(context.Background(), point); err != nil {
 						return fmt.Errorf("chainsync client failed: %w", err)
 					}
 				}
@@ -114,7 +153,7 @@ func (c *Client) ChainSync(ctx context.Context, store Store, callback ChainSyncF
 
 			case websocket.CloseMessage:
 				if point, ok := getPoint(last.list()...); ok {
-					if err := store.Save(context.Background(), point); err != nil {
+					if err := options.store.Save(context.Background(), point); err != nil {
 						return fmt.Errorf("chainsync client failed: %w", err)
 					}
 				}
@@ -140,7 +179,7 @@ func (c *Client) ChainSync(ctx context.Context, store Store, callback ChainSyncF
 			// periodically save points to the store to allow graceful recovery
 			if n%c.options.saveInterval == 0 {
 				if point, ok := getPoint(last.prefix(data)...); ok {
-					if err := store.Save(ctx, point); err != nil {
+					if err := options.store.Save(ctx, point); err != nil {
 						return fmt.Errorf("chainsync client failed: %w", err)
 					}
 				}

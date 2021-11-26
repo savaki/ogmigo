@@ -16,18 +16,19 @@ import (
 )
 
 func example(ctx context.Context) error {
-	client, err := ogmigo.NewChainSyncClient(ctx)
-	if err != nil {
-		return err
+	var callback ogmigo.ChainSyncFunc = func(ctx context.Context, data []byte) error {
+		// do work
+		return nil
 	}
-	defer client.Close()
 
-	response, err := client.ReadNext(ctx) // data is an instance of json.RawMessage
+	client := ogmigo.New(ogmigo.WithEndpoint("ws://example.com:1337"))
+	wait, err := client.ChainSync(ctx, callback)
 	if err != nil {
 		return err
-	}
-	
-	// do something with response
+    }
+	if err := wait() ; err != nil {
+		return err
+    }
 	
 	return nil
 }
