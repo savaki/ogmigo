@@ -2,7 +2,6 @@ package ogmigo
 
 import (
 	"bytes"
-	"context"
 	"log"
 )
 
@@ -19,8 +18,8 @@ func KV(key, value string) KeyValue {
 }
 
 type Logger interface {
-	Debug(ctx context.Context, message string, kvs ...KeyValue)
-	Info(ctx context.Context, message string, kvs ...KeyValue)
+	Debug(message string, kvs ...KeyValue)
+	Info(message string, kvs ...KeyValue)
 	With(kvs ...KeyValue) Logger
 }
 
@@ -46,11 +45,11 @@ func (d defaultLogger) print(message string, kvs ...KeyValue) {
 	log.Println(buf)
 }
 
-func (d defaultLogger) Debug(_ context.Context, message string, kvs ...KeyValue) {
+func (d defaultLogger) Debug(message string, kvs ...KeyValue) {
 	d.print(message, kvs...)
 }
 
-func (d defaultLogger) Info(_ context.Context, message string, kvs ...KeyValue) {
+func (d defaultLogger) Info(message string, kvs ...KeyValue) {
 	d.print(message, kvs...)
 }
 
@@ -66,6 +65,6 @@ var NopLogger = nopLogger{}
 type nopLogger struct {
 }
 
-func (n nopLogger) Debug(context.Context, string, ...KeyValue) {}
-func (n nopLogger) Info(context.Context, string, ...KeyValue)  {}
-func (n nopLogger) With(...KeyValue) Logger                    { return n }
+func (n nopLogger) Debug(string, ...KeyValue) {}
+func (n nopLogger) Info(string, ...KeyValue)  {}
+func (n nopLogger) With(...KeyValue) Logger   { return n }

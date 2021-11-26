@@ -29,8 +29,8 @@ func (c *Client) ChainSync(ctx context.Context, store Store, callback ChainSyncF
 
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		c.options.logger.Info(ctx, "ogmigo chainsync started")
-		defer c.options.logger.Info(ctx, "ogmigo chainsync stopped")
+		c.options.logger.Info("ogmigo chainsync started")
+		defer c.options.logger.Info("ogmigo chainsync stopped")
 		<-ctx.Done()
 		return nil
 	})
@@ -95,7 +95,7 @@ func (c *Client) ChainSync(ctx context.Context, store Store, callback ChainSyncF
 
 			switch messageType {
 			case websocket.BinaryMessage:
-				c.options.logger.Info(ctx, "skipping unexpected binary message")
+				c.options.logger.Info("skipping unexpected binary message")
 				continue
 
 			case websocket.CloseMessage:
