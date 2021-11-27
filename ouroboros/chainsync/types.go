@@ -304,6 +304,11 @@ type ProtocolVersion struct {
 	Patch uint32 `json:"patch,omitempty"`
 }
 
+type RollBackward struct {
+	Point Point `json:"point,omitempty" dynamodbav:"point,omitempty"`
+	Tip   Point `json:"tip,omitempty"   dynamodbav:"tip,omitempty"`
+}
+
 type RollForward struct {
 	Block RollForwardBlock `json:"block,omitempty" dynamodbav:"block,omitempty"`
 	Tip   Point            `json:"tip,omitempty"   dynamodbav:"tip,omitempty"`
@@ -320,7 +325,7 @@ type RollForwardBlock struct {
 type Result struct {
 	IntersectionFound *IntersectionFound `json:",omitempty" dynamodbav:",omitempty"`
 	RollForward       *RollForward       `json:",omitempty" dynamodbav:",omitempty"`
-	RollBackward      json.RawMessage    `json:",omitempty" dynamodbav:",omitempty"`
+	RollBackward      *RollBackward      `json:",omitempty" dynamodbav:",omitempty"`
 }
 
 type Response struct {

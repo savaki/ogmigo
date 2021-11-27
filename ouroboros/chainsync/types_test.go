@@ -67,8 +67,6 @@ func TestDynamodbSerialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
-	decoder := json.NewDecoder(nil)
-	decoder.DisallowUnknownFields()
 }
 
 func assertDynamoDBSerialize(t *testing.T) filepath.WalkFunc {
@@ -85,7 +83,9 @@ func assertDynamoDBSerialize(t *testing.T) filepath.WalkFunc {
 		defer f.Close()
 
 		var want Response
-		err = json.NewDecoder(f).Decode(&want)
+		decoder := json.NewDecoder(f)
+		decoder.DisallowUnknownFields()
+		err = decoder.Decode(&want)
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
