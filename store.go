@@ -16,6 +16,7 @@ package ogmigo
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/savaki/ogmigo/ouroboros/chainsync"
 )
@@ -28,6 +29,32 @@ type Store interface {
 	Save(ctx context.Context, point chainsync.Point) error
 	// Load saved points
 	Load(ctx context.Context) (chainsync.Points, error)
+}
+
+type loggingStore struct {
+	logger Logger
+}
+
+// NewLoggingStore logs Save requests, but does not actually save points
+func NewLoggingStore(logger Logger) Store {
+	return &loggingStore{
+		logger: logger,
+	}
+}
+
+func (l *loggingStore) Save(_ context.Context, point chainsync.Point) error {
+	var kvs []KeyValue
+	if ps, ok := point.PointStruct(); ok {
+		kvs = append(kvs, KV("slot", strconv.FormatUint(ps.Slot, 10)))
+		kvs = append(kvs, KV("block", strconv.FormatUint(ps.BlockNo, 10)))
+		kvs = append(kvs, KV("hash", ps.Hash))
+	}
+	l.logger.Info("save point", kvs...)
+	return nil
+}
+
+func (l *loggingStore) Load(_ context.Context) (chainsync.Points, error) {
+	return nil, nil
 }
 
 type nopStore struct {
