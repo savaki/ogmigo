@@ -243,13 +243,13 @@ func getInit(ctx context.Context, store Store, points ...chainsync.Point) (data 
 		points = points[0:5]
 	}
 
-	init := map[string]interface{}{
+	init := Map{
 		"type":        "jsonwsp/request",
 		"version":     "1.0",
 		"servicename": "ogmios",
 		"methodname":  "FindIntersect",
-		"args":        map[string]interface{}{"points": points},
-		"mirror":      map[string]interface{}{"step": "INIT"},
+		"args":        Map{"points": points},
+		"mirror":      Map{"step": "INIT"},
 	}
 	return json.Marshal(init)
 }

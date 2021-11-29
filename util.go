@@ -14,6 +14,9 @@
 
 package ogmigo
 
+// Map provides a simple type alias
+type Map map[string]interface{}
+
 type circular struct {
 	index int
 	data  [][]byte
@@ -42,4 +45,14 @@ func (c *circular) list() (data [][]byte) {
 
 func (c *circular) prefix(data ...[]byte) [][]byte {
 	return append(data, c.list()...)
+}
+
+func makePayload(methodName string, args Map) Map {
+	return Map{
+		"type":        "jsonwsp/request",
+		"version":     "1.0",
+		"servicename": "ogmios",
+		"methodname":  methodName,
+		"args":        args,
+	}
 }
