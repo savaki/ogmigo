@@ -3,7 +3,7 @@ module github.com/savaki/ogmigo
 go 1.17
 
 require (
-	github.com/aws/aws-sdk-go v1.42.11
+	github.com/aws/aws-sdk-go v1.42.12
 	github.com/fxamacker/cbor v1.5.1
 	github.com/gorilla/websocket v1.4.2
 	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249

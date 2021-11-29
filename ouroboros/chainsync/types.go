@@ -113,6 +113,10 @@ type IntersectionFound struct {
 	Tip   Point
 }
 
+type IntersectionNotFound struct {
+	Tip Point
+}
+
 type Collateral struct {
 	Index int    `json:"index" dynamodbav:"index"`
 	TxId  string `json:"txId"  dynamodbav:"tx_id"`
@@ -322,10 +326,41 @@ type RollForwardBlock struct {
 	Shelley *Block      `json:"shelley,omitempty" dynamodbav:"shelley,omitempty"`
 }
 
+func (r RollForwardBlock) PointStruct() PointStruct {
+	if byron := r.Byron; byron != nil {
+		return PointStruct{
+			BlockNo: byron.Header.BlockHeight,
+			Hash:    byron.Hash,
+			Slot:    byron.Header.Slot,
+		}
+	}
+
+	var block *Block
+	switch {
+	case r.Allegra != nil:
+		block = r.Allegra
+	case r.Alonzo != nil:
+		block = r.Alonzo
+	case r.Mary != nil:
+		block = r.Mary
+	case r.Shelley != nil:
+		block = r.Shelley
+	default:
+		return PointStruct{}
+	}
+
+	return PointStruct{
+		BlockNo: block.Header.BlockHeight,
+		Hash:    block.HeaderHash,
+		Slot:    block.Header.Slot,
+	}
+}
+
 type Result struct {
-	IntersectionFound *IntersectionFound `json:",omitempty" dynamodbav:",omitempty"`
-	RollForward       *RollForward       `json:",omitempty" dynamodbav:",omitempty"`
-	RollBackward      *RollBackward      `json:",omitempty" dynamodbav:",omitempty"`
+	IntersectionFound    *IntersectionFound    `json:",omitempty" dynamodbav:",omitempty"`
+	IntersectionNotFound *IntersectionNotFound `json:",omitempty" dynamodbav:",omitempty"`
+	RollForward          *RollForward          `json:",omitempty" dynamodbav:",omitempty"`
+	RollBackward         *RollBackward         `json:",omitempty" dynamodbav:",omitempty"`
 }
 
 type Response struct {

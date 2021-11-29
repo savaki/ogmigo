@@ -63,7 +63,7 @@ func assertStructMatchesSchema(t *testing.T) filepath.WalkFunc {
 }
 
 func TestDynamodbSerialize(t *testing.T) {
-	err := filepath.Walk("../../ext/ogmios/server/test/vectors/ChainSync/Response/RequestNext", assertDynamoDBSerialize(t))
+	err := filepath.Walk("../../ext/ogmios/server/test/vectors/ChainSync/Response", assertDynamoDBSerialize(t))
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
