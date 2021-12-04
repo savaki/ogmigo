@@ -17,18 +17,31 @@ package ogmigo
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 )
 
 // SubmitTx submits the transaction via ogmios
 // https://ogmios.dev/mini-protocols/local-tx-submission/
-func (c *Client) SubmitTx(ctx context.Context, signedTx []byte) (err error) {
-	payload := Map{
-		"type":        "jsonwsp/request",
-		"version":     "1.0",
-		"servicename": "ogmios",
-		"methodname":  "SubmitTx",
-		"args":        Map{"bytes": signedTx},
+func (c *Client) SubmitTx(ctx context.Context, data []byte) (err error) {
+	var content struct{ CborHex string }
+	if err := json.Unmarshal(data, &content); err != nil {
+		return fmt.Errorf("failed to decode signed tx: %w", err)
 	}
-	var got json.RawMessage
-	return c.query(ctx, payload, &got)
+
+	signedTx := content.CborHex
+	if signedTx == "" {
+		signedTx = string(data)
+	}
+
+	var (
+		payload = makePayload("SubmitTx", Map{"bytes": signedTx})
+		got     json.RawMessage
+	)
+	if err := c.query(ctx, payload, &got); err != nil {
+		return fmt.Errorf("failed to submit tx: %w", err)
+	}
+
+	fmt.Println(string(got))
+
+	return nil
 }
