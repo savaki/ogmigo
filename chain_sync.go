@@ -34,8 +34,9 @@ type ChainSyncFunc func(ctx context.Context, data []byte) error
 
 // ChainSyncOptions configuration parameters
 type ChainSyncOptions struct {
-	points chainsync.Points
-	store  Store
+	minSlot uint64           // minSlot to begin invoking ChainSyncFunc; 0 for always invoke func
+	points  chainsync.Points // points to attempt initial intersection
+	store   Store            // store of points
 }
 
 func buildChainSyncOptions(opts ...ChainSyncOption) ChainSyncOptions {
@@ -51,6 +52,13 @@ func buildChainSyncOptions(opts ...ChainSyncOption) ChainSyncOptions {
 
 // ChainSyncOption provides functional options for ChainSync
 type ChainSyncOption func(opts *ChainSyncOptions)
+
+// WithMinSlot ignores any activity prior to the specified slot
+func WithMinSlot(slot uint64) ChainSyncOption {
+	return func(opts *ChainSyncOptions) {
+		opts.minSlot = slot
+	}
+}
 
 // WithPoints allows starting from an optional point
 func WithPoints(points ...chainsync.Point) ChainSyncOption {
@@ -142,6 +150,7 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 	})
 
 	group.Go(func() error {
+		checkSlot := options.minSlot > 0
 		last := newCircular(3)
 		for n := uint64(1); ; n++ {
 			messageType, data, err := conn.ReadMessage()
@@ -196,6 +205,18 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 
 			case websocket.TextMessage:
 				// ok
+			}
+
+			// allow rapid bypassing of earlier slots
+			if checkSlot {
+				if point, ok := getPoint(data); ok {
+					if ps, ok := point.PointStruct(); ok {
+						if ps.Slot < options.minSlot {
+							continue
+						}
+						checkSlot = false
+					}
+				}
 			}
 
 			if err := callback(ctx, data); err != nil {
