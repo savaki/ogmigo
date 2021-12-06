@@ -159,7 +159,29 @@ type Point struct {
 	pointStruct *PointStruct
 }
 
+func (p Point) String() string {
+	switch p.pointType {
+	case PointTypeString:
+		return string(p.pointString)
+	case PointTypeStruct:
+		if p.pointStruct.BlockNo == 0 {
+			return fmt.Sprintf("slot=%v hash=%v", p.pointStruct.Slot, p.pointStruct.Hash)
+		}
+		return fmt.Sprintf("slot=%v hash=%v block=%v", p.pointStruct.Slot, p.pointStruct.Hash, p.pointStruct.BlockNo)
+	default:
+		return "invalid point"
+	}
+}
+
 type Points []Point
+
+func (pp Points) String() string {
+	var ss []string
+	for _, p := range pp {
+		ss = append(ss, p.String())
+	}
+	return strings.Join(ss, ", ")
+}
 
 func (pp Points) Len() int      { return len(pp) }
 func (pp Points) Swap(i, j int) { pp[i], pp[j] = pp[j], pp[i] }
