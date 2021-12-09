@@ -84,7 +84,7 @@ func (a AssetID) PolicyID() string {
 	if index := strings.Index(s, "."); index > 0 {
 		return s[:index]
 	}
-	return ""
+	return s // Assets with empty-string name come back as just the policy ID
 }
 
 type Block struct {
