@@ -309,44 +309,10 @@ func getPoint(data ...[]byte) (chainsync.Point, bool) {
 		var response chainsync.Response
 		if err := json.Unmarshal(d, &response); err == nil {
 			if response.Result != nil && response.Result.RollForward != nil {
-				if point, ok := getPointFromBlock(response.Result.RollForward.Block); ok {
-					return point, true
-				}
+				ps := response.Result.RollForward.Block.PointStruct()
+				return ps.Point(), true
 			}
 		}
 	}
 	return chainsync.Point{}, false
-}
-
-// getPointFromBlock extracts a point from a block regardless of which era we were in
-func getPointFromBlock(block chainsync.RollForwardBlock) (chainsync.Point, bool) {
-	if byron := block.Byron; byron != nil {
-		return chainsync.PointStruct{
-			BlockNo: byron.Header.BlockHeight,
-			Hash:    byron.Hash,
-			Slot:    byron.Header.Slot,
-		}.Point(), true
-	}
-
-	var header chainsync.BlockHeader
-	switch {
-	case block.Allegra != nil:
-		header = block.Allegra.Header
-	case block.Alonzo != nil:
-		header = block.Alonzo.Header
-	case block.Byron != nil:
-		// already handled above
-	case block.Mary != nil:
-		header = block.Mary.Header
-	case block.Shelley != nil:
-		header = block.Shelley.Header
-	default:
-		return chainsync.Point{}, false
-	}
-
-	return chainsync.PointStruct{
-		BlockNo: header.BlockHeight,
-		Hash:    header.BlockHash,
-		Slot:    header.Slot,
-	}.Point(), true
 }
