@@ -29,6 +29,32 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// ChainSync provides control over a given ChainSync connection
+type ChainSync struct {
+	cancel context.CancelFunc
+	ch     chan error
+	done   chan struct{}
+	err    error
+	logger Logger
+}
+
+// Done indicates the ChainSync has terminated prematurely
+func (c *ChainSync) Done() <-chan struct{} {
+	return c.done
+}
+
+// Close the ChainSync connection
+func (c *ChainSync) Close() error {
+	c.cancel()
+	v, ok := <-c.ch
+	if !ok {
+		return c.err
+	}
+
+	c.err = v
+	return c.err
+}
+
 // ChainSyncFunc callback containing json encoded chainsync.Response
 type ChainSyncFunc func(ctx context.Context, data []byte) error
 
@@ -74,16 +100,10 @@ func WithStore(store Store) ChainSyncOption {
 	}
 }
 
-type closeFunc func() error
-
-func (fn closeFunc) Close() error {
-	return fn()
-}
-
 // ChainSync replays the blockchain by invoking the callback for each block
 // By default, ChainSync stores no checkpoints and always restarts from origin.  These can
 // be overridden via WithPoints and WithStore
-func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...ChainSyncOption) (io.Closer, error) {
+func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...ChainSyncOption) (*ChainSync, error) {
 	options := buildChainSyncOptions(opts...)
 
 	conn, _, err := websocket.DefaultDialer.Dial(c.options.endpoint, nil)
@@ -235,18 +255,20 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 		}
 	})
 
-	shutdown := func() error {
-		c.options.logger.Info("ogmigo shutdown requested")
+	done := make(chan struct{})
+	errs := make(chan error, 1)
+	go func() {
+		defer close(done)
 		defer c.options.logger.Info("ogmigo shutdown completed")
+		errs <- group.Wait()
+	}()
 
-		cancel()
-		if err := group.Wait(); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	return closeFunc(shutdown), nil
+	return &ChainSync{
+		cancel: cancel,
+		ch:     errs,
+		done:   done,
+		logger: c.options.logger,
+	}, nil
 }
 
 func getInit(ctx context.Context, store Store, pp ...chainsync.Point) (data []byte, err error) {
