@@ -249,17 +249,18 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 	return closeFunc(shutdown), nil
 }
 
-func getInit(ctx context.Context, store Store, points ...chainsync.Point) (data []byte, err error) {
-	if len(points) == 0 {
-		points, err = store.Load(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve points from store: %w", err)
-		}
-		if len(points) == 0 {
-			points = append(points, chainsync.Origin)
-		}
+func getInit(ctx context.Context, store Store, pp ...chainsync.Point) (data []byte, err error) {
+	points, err := store.Load(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve points from store: %w", err)
 	}
-	sort.Sort(chainsync.Points(points))
+	if len(points) == 0 {
+		points = append(points, pp...)
+	}
+	if len(points) == 0 {
+		points = append(points, chainsync.Origin)
+	}
+	sort.Sort(points)
 	if len(points) > 5 {
 		points = points[0:5]
 	}

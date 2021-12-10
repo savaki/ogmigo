@@ -92,3 +92,57 @@ func (e echoStore) Save(_ context.Context, p chainsync.Point) error {
 func (e echoStore) Load(context.Context) (chainsync.Points, error) {
 	return nil, nil
 }
+
+type mockStore struct {
+	pp chainsync.Points
+}
+
+func (m mockStore) Save(_ context.Context, p chainsync.Point) error {
+	return nil
+}
+
+func (m mockStore) Load(context.Context) (chainsync.Points, error) {
+	return m.pp, nil
+}
+
+func Test_getInit(t *testing.T) {
+	ctx := context.Background()
+	p1 := chainsync.PointStruct{
+		BlockNo: 123,
+		Hash:    "hash",
+		Slot:    456,
+	}
+	p2 := chainsync.PointStruct{
+		BlockNo: 321,
+		Hash:    "hash",
+		Slot:    654,
+	}
+
+	t.Run("from store", func(t *testing.T) {
+		store := mockStore{
+			pp: chainsync.Points{p1.Point()},
+		}
+		points, err := getInit(ctx, store, p2.Point())
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		want := `{"args":{"points":[{"blockNo":123,"hash":"hash","slot":456}]},"methodname":"FindIntersect","mirror":{"step":"INIT"},"servicename":"ogmios","type":"jsonwsp/request","version":"1.0"}`
+		if got := string(points); got != want {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+	})
+
+	t.Run("from points", func(t *testing.T) {
+		store := mockStore{}
+		points, err := getInit(ctx, store, p1.Point())
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		want := `{"args":{"points":[{"blockNo":123,"hash":"hash","slot":456}]},"methodname":"FindIntersect","mirror":{"step":"INIT"},"servicename":"ogmios","type":"jsonwsp/request","version":"1.0"}`
+		if got := string(points); got != want {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+	})
+}
