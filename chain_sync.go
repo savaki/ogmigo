@@ -21,8 +21,10 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"sort"
 	"sync/atomic"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/savaki/ogmigo/ouroboros/chainsync"
@@ -32,7 +34,7 @@ import (
 // ChainSync provides control over a given ChainSync connection
 type ChainSync struct {
 	cancel context.CancelFunc
-	ch     chan error
+	errs   chan error
 	done   chan struct{}
 	err    error
 	logger Logger
@@ -46,7 +48,7 @@ func (c *ChainSync) Done() <-chan struct{} {
 // Close the ChainSync connection
 func (c *ChainSync) Close() error {
 	c.cancel()
-	v, ok := <-c.ch
+	v, ok := <-c.errs
 	if !ok {
 		return c.err
 	}
@@ -60,9 +62,10 @@ type ChainSyncFunc func(ctx context.Context, data []byte) error
 
 // ChainSyncOptions configuration parameters
 type ChainSyncOptions struct {
-	minSlot uint64           // minSlot to begin invoking ChainSyncFunc; 0 for always invoke func
-	points  chainsync.Points // points to attempt initial intersection
-	store   Store            // store of points
+	minSlot   uint64           // minSlot to begin invoking ChainSyncFunc; 0 for always invoke func
+	points    chainsync.Points // points to attempt initial intersection
+	reconnect bool             // reconnect to ogmios if connection drops
+	store     Store            // store of points
 }
 
 func buildChainSyncOptions(opts ...ChainSyncOption) ChainSyncOptions {
@@ -93,6 +96,13 @@ func WithPoints(points ...chainsync.Point) ChainSyncOption {
 	}
 }
 
+// WithReconnect attempt to reconnect to ogmios if connection drops
+func WithReconnect(enabled bool) ChainSyncOption {
+	return func(opts *ChainSyncOptions) {
+		opts.reconnect = enabled
+	}
+}
+
 // WithStore specifies store to persist points to; defaults to no persistence
 func WithStore(store Store) ChainSyncOption {
 	return func(opts *ChainSyncOptions) {
@@ -106,17 +116,60 @@ func WithStore(store Store) ChainSyncOption {
 func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...ChainSyncOption) (*ChainSync, error) {
 	options := buildChainSyncOptions(opts...)
 
+	done := make(chan struct{})
+	errs := make(chan error, 1)
+	ctx, cancel := context.WithCancel(ctx)
+
+	go func() {
+		defer close(done)
+
+		var (
+			timeout = 10 * time.Second
+			err     error
+		)
+		for {
+			err = c.doChainSync(ctx, callback, options)
+			if err != nil && isTemporaryError(err) {
+				if options.reconnect {
+					c.options.logger.Info("websocket connection error: will retry",
+						KV("delay", timeout.Round(time.Millisecond).String()),
+						KV("err", err.Error()),
+					)
+
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(timeout):
+						continue
+					}
+				}
+			}
+
+			break
+		}
+
+		errs <- err
+	}()
+
+	return &ChainSync{
+		cancel: cancel,
+		errs:   errs,
+		done:   done,
+		logger: c.logger,
+	}, nil
+}
+
+func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, options ChainSyncOptions) error {
 	conn, _, err := websocket.DefaultDialer.Dial(c.options.endpoint, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to ogmios, %v: %w", c.options.endpoint, err)
+		return fmt.Errorf("failed to connect to ogmios, %v: %w", c.options.endpoint, err)
 	}
 
 	init, err := getInit(ctx, options.store, options.points...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create init message: %w", err)
+		return fmt.Errorf("failed to create init message: %w", err)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
 		c.options.logger.Info("ogmigo chainsync started")
@@ -254,21 +307,7 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 			last.add(data)
 		}
 	})
-
-	done := make(chan struct{})
-	errs := make(chan error, 1)
-	go func() {
-		defer close(done)
-		defer c.options.logger.Info("ogmigo shutdown completed")
-		errs <- group.Wait()
-	}()
-
-	return &ChainSync{
-		cancel: cancel,
-		ch:     errs,
-		done:   done,
-		logger: c.options.logger,
-	}, nil
+	return group.Wait()
 }
 
 func getInit(ctx context.Context, store Store, pp ...chainsync.Point) (data []byte, err error) {
@@ -315,4 +354,29 @@ func getPoint(data ...[]byte) (chainsync.Point, bool) {
 		}
 	}
 	return chainsync.Point{}, false
+}
+
+// isTemporaryError returns true if the error is recoverable
+func isTemporaryError(err error) bool {
+	var wce *websocket.CloseError
+	if ok := errors.As(err, &wce); ok && wce.Code == websocket.CloseAbnormalClosure {
+		return true
+	}
+
+	var noe *net.OpError
+	if ok := errors.As(err, &noe); ok {
+		var sce *os.SyscallError
+		if ok := errors.As(noe.Err, &sce); ok && sce.Syscall == "connect" {
+			return true
+		}
+		return noe.Temporary()
+	}
+
+	// handle the generic temporary error
+	var temp interface{ Temporary() bool }
+	if ok := errors.As(err, &temp); ok {
+		return temp.Temporary()
+	}
+
+	return false
 }

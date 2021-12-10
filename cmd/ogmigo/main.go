@@ -133,6 +133,7 @@ func action(_ *cli.Context) error {
 	closer, err := client.ChainSync(ctx, callback,
 		ogmigo.WithStore(badgerstore.New(db, "points")),
 		ogmigo.WithPoints(points...),
+		ogmigo.WithReconnect(true),
 	)
 
 	if err != nil {
