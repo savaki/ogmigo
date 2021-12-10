@@ -48,12 +48,12 @@ func (c *ChainSync) Done() <-chan struct{} {
 // Close the ChainSync connection
 func (c *ChainSync) Close() error {
 	c.cancel()
-	v, ok := <-c.errs
-	if !ok {
-		return c.err
+	select {
+	case v := <-c.errs:
+		c.err = v
+	default:
+		// err already set
 	}
-
-	c.err = v
 	return c.err
 }
 
