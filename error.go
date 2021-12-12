@@ -14,7 +14,9 @@
 
 package ogmigo
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Error encapsulates errors from ogmios
 type Error struct {

@@ -25,10 +25,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/dgraph-io/badger/v3"
 	"github.com/savaki/ogmigo"
 	"github.com/savaki/ogmigo/ouroboros/chainsync"
-	"github.com/savaki/ogmigo/store/badgerstore"
 	"github.com/urfave/cli/v2"
 )
 
@@ -42,13 +40,6 @@ var opts struct {
 func main() {
 	app := cli.NewApp()
 	app.Flags = []cli.Flag{
-		&cli.StringFlag{
-			Name:        "db",
-			Usage:       "db directory",
-			Value:       "testdb", // mainnet2
-			EnvVars:     []string{"DB_DIR"},
-			Destination: &opts.DB,
-		},
 		&cli.StringFlag{
 			Name:        "ogmios",
 			Usage:       "ogmios websocket endpoint",
@@ -79,12 +70,6 @@ func main() {
 }
 
 func action(_ *cli.Context) error {
-	db, err := badger.Open(badger.DefaultOptions(opts.DB))
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
 	client := ogmigo.New(
 		ogmigo.WithEndpoint(opts.Ogmios),
 		ogmigo.WithLogger(ogmigo.DefaultLogger),
@@ -131,7 +116,6 @@ func action(_ *cli.Context) error {
 		return nil
 	}
 	closer, err := client.ChainSync(ctx, callback,
-		ogmigo.WithStore(badgerstore.New(db, "points")),
 		ogmigo.WithPoints(points...),
 		ogmigo.WithReconnect(true),
 	)

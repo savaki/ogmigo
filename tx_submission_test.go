@@ -17,7 +17,11 @@ package ogmigo
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io/fs"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -35,5 +39,49 @@ func TestClient_SubmitTx(t *testing.T) {
 	ok := errors.As(err, &e)
 	if !ok {
 		t.Fatalf("got want; want true")
+	}
+}
+
+func TestSubmitTxResult(t *testing.T) {
+	err := filepath.Walk("ext/ogmios/server/test/vectors/TxSubmission", testSubmitTxResult(t))
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
+}
+
+func testSubmitTxResult(t *testing.T) filepath.WalkFunc {
+	return func(path string, info fs.FileInfo, err error) error {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			if err != nil {
+				t.Fatalf("got %v; want nil", err)
+			}
+			if info.IsDir() {
+				return
+			}
+
+			data, err := ioutil.ReadFile(path)
+			if err != nil {
+				t.Fatalf("got %v; want nil", err)
+			}
+
+			err = readSubmitTx(data)
+			var ste SubmitTxError
+			if ok := errors.As(err, &ste); ok {
+				keys, err := ste.ErrorCodes()
+				if err != nil {
+					t.Fatalf("got %v; want nil", err)
+				}
+				if len(keys) == 0 {
+					t.Fatalf("got 0 keys; want > 0")
+				}
+				fmt.Println(keys)
+				return
+			}
+			if err != nil {
+				t.Fatalf("got %v; want nil", err)
+			}
+		})
+
+		return nil
 	}
 }
