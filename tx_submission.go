@@ -100,6 +100,11 @@ func (s SubmitTxError) ErrorCodes() (keys []string, err error) {
 	return keys, nil
 }
 
+// Messages returns the raw messages from SubmitTxError
+func (s SubmitTxError) Messages() []json.RawMessage {
+	return s.messages
+}
+
 // Error implements the error interface
 func (s SubmitTxError) Error() string {
 	keys, _ := s.ErrorCodes()
