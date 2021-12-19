@@ -30,11 +30,15 @@ func (c *Client) query(ctx context.Context, payload interface{}, v interface{}) 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	var conn *websocket.Conn
-	var closed int64 // ensures close is only called once
+	var (
+		ch     = make(chan error, 1)
+		conn   *websocket.Conn
+		closed int64 // ensures close is only called once
+	)
 	go func() {
 		<-ctx.Done()
 		if conn != nil {
+			ch <- ctx.Err()
 			if v := atomic.AddInt64(&closed, 1); v == 1 {
 				conn.Close()
 			}
@@ -48,6 +52,8 @@ func (c *Client) query(ctx context.Context, payload interface{}, v interface{}) 
 	defer func() {
 		if v := atomic.AddInt64(&closed, 1); v == 1 {
 			conn.Close()
+		} else {
+			err = <-ch
 		}
 	}()
 
