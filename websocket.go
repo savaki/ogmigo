@@ -19,18 +19,37 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/gorilla/websocket"
 )
 
 var fault = []byte(`jsonwsp/fault`)
 
-func (c *Client) query(ctx context.Context, payload interface{}, v interface{}) error {
-	conn, _, err := websocket.DefaultDialer.DialContext(ctx, c.options.endpoint, nil)
+func (c *Client) query(ctx context.Context, payload interface{}, v interface{}) (err error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var conn *websocket.Conn
+	var closed int64 // ensures close is only called once
+	go func() {
+		<-ctx.Done()
+		if conn != nil {
+			if v := atomic.AddInt64(&closed, 1); v == 1 {
+				conn.Close()
+			}
+		}
+	}()
+
+	conn, _, err = websocket.DefaultDialer.DialContext(ctx, c.options.endpoint, nil)
 	if err != nil {
 		return fmt.Errorf("failed to connect to ogmios, %v: %w", c.options.endpoint, err)
 	}
-	defer conn.Close()
+	defer func() {
+		if v := atomic.AddInt64(&closed, 1); v == 1 {
+			conn.Close()
+		}
+	}()
 
 	if err := conn.WriteJSON(payload); err != nil {
 		return fmt.Errorf("failed to submit request: %w", err)
