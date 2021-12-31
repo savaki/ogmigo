@@ -448,6 +448,10 @@ type TxIn struct {
 	Index  int    `json:"index" dynamodbav:"index"`
 }
 
+func (t TxIn) String() string {
+	return t.TxHash + "#" + strconv.Itoa(t.Index)
+}
+
 func (t TxIn) TxID() TxID {
 	return NewTxID(t.TxHash, t.Index)
 }
