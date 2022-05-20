@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/fxamacker/cbor"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/nsf/jsondiff"
 )
 
@@ -129,7 +129,7 @@ func assertDynamoDBSerialize(t *testing.T) filepath.WalkFunc {
 func TestPoint_CBOR(t *testing.T) {
 	t.Run("string", func(t *testing.T) {
 		want := PointString("origin")
-		item, err := cbor.Marshal(want.Point(), encOptions)
+		item, err := cbor.Marshal(want.Point())
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
@@ -157,7 +157,7 @@ func TestPoint_CBOR(t *testing.T) {
 			Hash:    "hash",
 			Slot:    456,
 		}
-		item, err := cbor.Marshal(want.Point(), encOptions)
+		item, err := cbor.Marshal(want.Point())
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}

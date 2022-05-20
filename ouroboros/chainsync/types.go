@@ -27,7 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/fxamacker/cbor"
+	"github.com/fxamacker/cbor/v2"
 	"github.com/savaki/ogmigo/ouroboros/chainsync/num"
 )
 
@@ -233,7 +233,7 @@ func (p Point) MarshalCBOR() ([]byte, error) {
 			String: p.pointString,
 			Struct: p.pointStruct,
 		}
-		return cbor.Marshal(v, encOptions)
+		return cbor.Marshal(v)
 	default:
 		return nil, fmt.Errorf("unable to unmarshal Point: unknown type")
 	}
