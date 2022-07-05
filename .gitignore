@@ -6,3 +6,4 @@
 
 # ignore generated
 target
+.DS_Store

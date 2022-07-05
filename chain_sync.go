@@ -27,8 +27,9 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/savaki/ogmigo/ouroboros/chainsync"
 )
 
 // ChainSync provides control over a given ChainSync connection
@@ -147,7 +148,7 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 
 			break
 		}
-
+		fmt.Println("error", err)
 		errs <- err
 	}()
 

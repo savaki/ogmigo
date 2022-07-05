@@ -28,6 +28,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/fxamacker/cbor/v2"
+
 	"github.com/savaki/ogmigo/ouroboros/chainsync/num"
 )
 
@@ -477,7 +478,7 @@ func (tt TxOuts) FindByAssetID(assetID AssetID) (TxOut, bool) {
 
 type Witness struct {
 	Bootstrap  []json.RawMessage `json:"bootstrap,omitempty"  dynamodbav:"bootstrap,omitempty"`
-	Datums     map[string][]byte `json:"datums,omitempty"     dynamodbav:"datums,omitempty"`
+	Datums     map[string]string `json:"datums,omitempty"     dynamodbav:"datums,omitempty"`
 	Redeemers  json.RawMessage   `json:"redeemers,omitempty"  dynamodbav:"redeemers,omitempty"`
 	Scripts    json.RawMessage   `json:"scripts,omitempty"    dynamodbav:"scripts,omitempty"`
 	Signatures map[string]string `json:"signatures,omitempty" dynamodbav:"signatures,omitempty"`

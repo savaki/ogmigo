@@ -2,10 +2,11 @@ package statequery
 
 import (
 	"encoding/json"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
-	"github.com/savaki/ogmigo/ouroboros/chainsync/num"
 	"reflect"
 	"testing"
+
+	"github.com/savaki/ogmigo/ouroboros/chainsync"
+	"github.com/savaki/ogmigo/ouroboros/chainsync/num"
 )
 
 func TestUtxo_MarshalJSON(t *testing.T) {
