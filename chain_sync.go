@@ -148,7 +148,6 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 
 			break
 		}
-		fmt.Println("error", err)
 		errs <- err
 	}()
 
