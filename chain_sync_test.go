@@ -77,7 +77,7 @@ func TestClient_ChainSync(t *testing.T) {
 		t.Fatalf("got %v; want nil", err)
 	}
 
-	<-time.After(5 * time.Hour)
+	<-time.After(5 * time.Second)
 	if err := closer.Close(); err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
