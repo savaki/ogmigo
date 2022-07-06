@@ -19,14 +19,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 	"log"
 	"os"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+
+	"github.com/savaki/ogmigo/ouroboros/chainsync"
 )
 
 func TestClient_ChainSync(t *testing.T) {

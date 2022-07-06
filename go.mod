@@ -8,6 +8,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.4.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249
+	github.com/urfave/cli/v2 v2.10.3 // indirect
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 	golang.org/x/text v0.3.7
 )
