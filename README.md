@@ -12,7 +12,7 @@ package example
 
 import (
 	"context"
-	"github.com/savaki/ogmigo"
+	"github.com/SundaeSwap-finance/ogmigo"
 )
 
 func example(ctx context.Context) error {
