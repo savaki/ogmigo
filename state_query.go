@@ -19,8 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
-	"github.com/savaki/ogmigo/ouroboros/statequery"
+	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
+	"github.com/SundaeSwap-finance/ogmigo/ouroboros/statequery"
 )
 
 func (c *Client) ChainTip(ctx context.Context) (chainsync.Point, error) {

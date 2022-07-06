@@ -18,7 +18,7 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
+	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
 )
 
 // Store allows points to be saved and retrieved to allow graceful recovery

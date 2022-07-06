@@ -34,11 +34,8 @@ func TestClient_SubmitTx(t *testing.T) {
 	ctx := context.Background()
 	client := New(WithEndpoint(endpoint), WithLogger(DefaultLogger))
 	err := client.SubmitTx(ctx, []byte("blah"))
-
-	var e Error
-	ok := errors.As(err, &e)
-	if !ok {
-		t.Fatalf("got want; want true")
+	if err == nil {
+		t.Fatalf("expected error, got %v", err)
 	}
 }
 

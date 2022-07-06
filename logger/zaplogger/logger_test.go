@@ -15,9 +15,11 @@
 package zaplogger
 
 import (
-	"github.com/savaki/ogmigo"
-	"go.uber.org/zap"
 	"testing"
+
+	"go.uber.org/zap"
+
+	"github.com/SundaeSwap-finance/ogmigo"
 )
 
 func TestLogger_Debug(t *testing.T) {

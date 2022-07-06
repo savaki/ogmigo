@@ -3,38 +3,15 @@ package statequery
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
 	"time"
+
+	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
 )
 
 type EraStart struct {
 	Time  time.Duration `json:"time,omitempty"`
 	Slot  uint64        `json:"slot,omit"`
 	Epoch uint64        `json:"epoch,omit"`
-}
-
-func (e *EraStart) UnmarshalJSON(data []byte) (err error) {
-	var content struct {
-		Time  string `json:"time,omitempty"`
-		Slot  uint64 `json:"slot,omit"`
-		Epoch uint64 `json:"epoch,omit"`
-	}
-	if err := json.Unmarshal(data, &content); err != nil {
-		return fmt.Errorf("failed to unmarshal EraStart: %w", err)
-	}
-
-	t, err := time.ParseDuration(content.Time)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal EraStart: %w", err)
-	}
-
-	*e = EraStart{
-		Time:  t,
-		Slot:  content.Slot,
-		Epoch: content.Epoch,
-	}
-
-	return nil
 }
 
 type Utxo struct {

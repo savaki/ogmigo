@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
+	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
 )
 
 func TestNewLoggingStore(t *testing.T) {

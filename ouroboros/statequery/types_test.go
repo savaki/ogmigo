@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
-	"github.com/savaki/ogmigo/ouroboros/chainsync/num"
+	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
+	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync/num"
 )
 
 func TestUtxo_MarshalJSON(t *testing.T) {

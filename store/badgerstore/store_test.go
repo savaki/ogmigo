@@ -19,8 +19,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
 	"github.com/dgraph-io/badger/v3"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
 )
 
 func TestStore_Load(t *testing.T) {
