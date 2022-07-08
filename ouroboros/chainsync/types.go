@@ -344,6 +344,7 @@ type RollForward struct {
 type RollForwardBlock struct {
 	Allegra *Block      `json:"allegra,omitempty" dynamodbav:"allegra,omitempty"`
 	Alonzo  *Block      `json:"alonzo,omitempty"  dynamodbav:"alonzo,omitempty"`
+	Babbage *Block      `json:"babbage,omitempty" dynamodbav:"babbage,omitempty"`
 	Byron   *ByronBlock `json:"byron,omitempty"   dynamodbav:"byron,omitempty"`
 	Mary    *Block      `json:"mary,omitempty"    dynamodbav:"mary,omitempty"`
 	Shelley *Block      `json:"shelley,omitempty" dynamodbav:"shelley,omitempty"`
@@ -368,6 +369,8 @@ func (r RollForwardBlock) PointStruct() PointStruct {
 		block = r.Mary
 	case r.Shelley != nil:
 		block = r.Shelley
+	case r.Babbage != nil:
+		block = r.Babbage
 	default:
 		return PointStruct{}
 	}
@@ -396,10 +399,13 @@ type Response struct {
 }
 
 type Tx struct {
-	ID       string          `json:"id,omitempty"       dynamodbav:"id,omitempty"`
-	Body     TxBody          `json:"body,omitempty"     dynamodbav:"body,omitempty"`
-	Metadata json.RawMessage `json:"metadata,omitempty" dynamodbav:"metadata,omitempty"`
-	Witness  Witness         `json:"witness,omitempty"  dynamodbav:"witness,omitempty"`
+	ID          string          `json:"id,omitempty"       dynamodbav:"id,omitempty"`
+	InputSource string          `json:"inputSource,omitempty"  dynamodbav:"inputSource,omitempty"`
+	Body        TxBody          `json:"body,omitempty"     dynamodbav:"body,omitempty"`
+	Witness     Witness         `json:"witness,omitempty"  dynamodbav:"witness,omitempty"`
+	Metadata    json.RawMessage `json:"metadata,omitempty" dynamodbav:"metadata,omitempty"`
+	// Raw serialized transaction, base64.
+	Raw string `json:"raw,omitempty" dynamodbav:"raw,omitempty"`
 }
 
 type TxBody struct {
@@ -416,6 +422,14 @@ type TxBody struct {
 	Update                  json.RawMessage   `json:"update,omitempty"                  dynamodbav:"update,omitempty"`
 	ValidityInterval        ValidityInterval  `json:"validityInterval"                  dynamodbav:"validityInterval,omitempty"`
 	Withdrawals             map[string]int64  `json:"withdrawals,omitempty"             dynamodbav:"withdrawals,omitempty"`
+	CollateralReturn        *TxOut            `json:"collateralReturn,omitempty"        dynamodbav:"collateralReturn,omitempty"`
+	TotalCollateral         *int64            `json:"totalCollateral,omitempty"         dynamodbav:"totalCollateral,omitempty"`
+	References              []Reference       `json:"references,omitempty"              dynamodbav:"references,omitempty"`
+}
+
+type Reference struct {
+	TxID  string `json:"txId,omitempty" dynamodbav:"txId,omitempty"`
+	Index int    `json:"index,omitempty" dynamodbav:"index,omitempty"`
 }
 
 type TxID string
@@ -458,9 +472,11 @@ func (t TxIn) TxID() TxID {
 }
 
 type TxOut struct {
-	Address string `json:"address,omitempty" dynamodbav:"address,omitempty"`
-	Datum   string `json:"datum,omitempty"   dynamodbav:"datum,omitempty"`
-	Value   Value  `json:"value,omitempty"   dynamodbav:"value,omitempty"`
+	Address   string          `json:"address,omitempty"   dynamodbav:"address,omitempty"`
+	Datum     string          `json:"datum,omitempty"     dynamodbav:"datum,omitempty"`
+	DatumHash string          `json:"datumHash,omitempty" dynamodbav:"datumHash,omitempty"`
+	Value     Value           `json:"value,omitempty"     dynamodbav:"value,omitempty"`
+	Script    json.RawMessage `json:"script,omitempty"    dynamodbav:"script,omitempty"`
 }
 
 type TxOuts []TxOut
