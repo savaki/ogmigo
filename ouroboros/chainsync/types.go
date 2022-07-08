@@ -424,12 +424,7 @@ type TxBody struct {
 	Withdrawals             map[string]int64  `json:"withdrawals,omitempty"             dynamodbav:"withdrawals,omitempty"`
 	CollateralReturn        *TxOut            `json:"collateralReturn,omitempty"        dynamodbav:"collateralReturn,omitempty"`
 	TotalCollateral         *int64            `json:"totalCollateral,omitempty"         dynamodbav:"totalCollateral,omitempty"`
-	References              []Reference       `json:"references,omitempty"              dynamodbav:"references,omitempty"`
-}
-
-type Reference struct {
-	TxID  string `json:"txId,omitempty" dynamodbav:"txId,omitempty"`
-	Index int    `json:"index,omitempty" dynamodbav:"index,omitempty"`
+	References              []TxIn            `json:"references,omitempty"              dynamodbav:"references,omitempty"`
 }
 
 type TxID string
