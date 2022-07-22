@@ -118,11 +118,6 @@ type IntersectionNotFound struct {
 	Tip Point
 }
 
-type Collateral struct {
-	Index int    `json:"index" dynamodbav:"index"`
-	TxId  string `json:"txId"  dynamodbav:"tx_id"`
-}
-
 type PointType int
 
 const (
@@ -410,7 +405,7 @@ type Tx struct {
 
 type TxBody struct {
 	Certificates            []json.RawMessage `json:"certificates,omitempty"            dynamodbav:"certificates,omitempty"`
-	Collaterals             []Collateral      `json:"collaterals,omitempty"             dynamodbav:"collaterals,omitempty"`
+	Collaterals             []TxIn            `json:"collaterals,omitempty"             dynamodbav:"collaterals,omitempty"`
 	Fee                     num.Int           `json:"fee,omitempty"                     dynamodbav:"fee,omitempty"`
 	Inputs                  []TxIn            `json:"inputs,omitempty"                  dynamodbav:"inputs,omitempty"`
 	Mint                    *Value            `json:"mint,omitempty"                    dynamodbav:"mint,omitempty"`
@@ -487,9 +482,60 @@ func (tt TxOuts) FindByAssetID(assetID AssetID) (TxOut, bool) {
 	return TxOut{}, false
 }
 
+type Datums map[string]string
+
+func (d *Datums) UnmarshalJSON(i []byte) error {
+	if i == nil {
+		return nil
+	}
+
+	var raw map[string]interface{}
+	err := json.Unmarshal(i, &raw)
+	if err != nil {
+		return fmt.Errorf("unable to unmarshal as raw map: %w", err)
+	}
+
+	results := make(Datums, len(raw))
+	// for backwards compatibility, since ogmios switched Datum values from []byte to hex string
+	for k, v := range raw {
+		if hexString, ok := v.(string); ok {
+			results[k] = hexString
+		} else {
+			results[k] = hex.EncodeToString(v.([]byte))
+		}
+	}
+
+	*d = results
+	return nil
+}
+
+func (d *Datums) UnmarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
+	if item == nil {
+		return nil
+	}
+
+	var raw map[string]interface{}
+	if err := dynamodbattribute.UnmarshalMap(item.M, &raw); err != nil {
+		return fmt.Errorf("failed to unmarshal map: %w", err)
+	}
+
+	results := make(Datums, len(raw))
+	// for backwards compatibility, since ogmios switched Datum values from []byte to hex string
+	for k, v := range raw {
+		if hexString, ok := v.(string); ok {
+			results[k] = hexString
+		} else {
+			results[k] = hex.EncodeToString(v.([]byte))
+		}
+	}
+
+	*d = results
+	return nil
+}
+
 type Witness struct {
 	Bootstrap  []json.RawMessage `json:"bootstrap,omitempty"  dynamodbav:"bootstrap,omitempty"`
-	Datums     map[string]string `json:"datums,omitempty"     dynamodbav:"datums,omitempty"`
+	Datums     Datums            `json:"datums,omitempty"     dynamodbav:"datums,omitempty"`
 	Redeemers  json.RawMessage   `json:"redeemers,omitempty"  dynamodbav:"redeemers,omitempty"`
 	Scripts    json.RawMessage   `json:"scripts,omitempty"    dynamodbav:"scripts,omitempty"`
 	Signatures map[string]string `json:"signatures,omitempty" dynamodbav:"signatures,omitempty"`
