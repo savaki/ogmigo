@@ -16,6 +16,7 @@ package chainsync
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -497,12 +498,22 @@ func (d *Datums) UnmarshalJSON(i []byte) error {
 
 	results := make(Datums, len(raw))
 	// for backwards compatibility, since ogmios switched Datum values from []byte to hex string
+	// this should be safe to remove after we upgrade all ogmios nodes to >= 5.5.0
 	for k, v := range raw {
-		if hexString, ok := v.(string); ok {
-			results[k] = hexString
-		} else {
-			results[k] = hex.EncodeToString(v.([]byte))
+		s, isString := v.(string)
+		if !isString {
+			return fmt.Errorf("expecting string, got %v", v)
 		}
+		asHex := s
+		// if it's base64 encoded, convert it to a hex string.
+		if _, err := hex.DecodeString(s); err != nil {
+			rawDatum, err := base64.StdEncoding.DecodeString(s)
+			if err != nil {
+				return fmt.Errorf("unable to decode string %v: %w", s, err)
+			}
+			asHex = hex.EncodeToString(rawDatum)
+		}
+		results[k] = asHex
 	}
 
 	*d = results

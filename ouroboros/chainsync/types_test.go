@@ -15,6 +15,7 @@
 package chainsync
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -469,5 +470,35 @@ func TestVasil(t *testing.T) {
 	err := json.Unmarshal([]byte(data), &response)
 	if err != nil {
 		t.Fatalf("error unmarshalling response: %v", err)
+	}
+}
+
+func TestVasil_DatumParsing_Base64(t *testing.T) {
+	data := `{"datums": {"a": "2HmfWBzIboNaGwk6qBYQ/Tk19GPOUpkpze2Ldfe1HOZEQpwK/w=="}}`
+	var response Witness
+	err := json.Unmarshal([]byte(data), &response)
+	if err != nil {
+		t.Fatalf("error unmarshalling response: %v", err)
+	}
+
+	datumHex := response.Datums["a"]
+	_, err = hex.DecodeString(datumHex)
+	if err != nil {
+		t.Fatalf("error decoding hex string: %v", err)
+	}
+}
+
+func TestVasil_DatumParsing_Hex(t *testing.T) {
+	data := `{"datums": {"a": "d8799f581cc86e835a1b093aa81610fd3935f463ce529929cded8b75f7b51ce644429c0aff"}}`
+	var response Witness
+	err := json.Unmarshal([]byte(data), &response)
+	if err != nil {
+		t.Fatalf("error unmarshalling response: %v", err)
+	}
+
+	datumHex := response.Datums["a"]
+	_, err = hex.DecodeString(datumHex)
+	if err != nil {
+		t.Fatalf("error decoding hex string: %v", err)
 	}
 }
