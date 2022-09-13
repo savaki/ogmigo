@@ -19,15 +19,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/nsf/jsondiff"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestUnmarshal(t *testing.T) {
@@ -501,4 +504,18 @@ func TestVasil_DatumParsing_Hex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error decoding hex string: %v", err)
 	}
+}
+
+func TestVasil_BackwardsCompatibleWithExistingDynamoDB(t *testing.T) {
+	data, err := ioutil.ReadFile("testdata/scoop.json")
+	assert.Nil(t, err)
+
+	var item map[string]*dynamodb.AttributeValue
+	err = json.Unmarshal(data, &item)
+	assert.NoError(t, err)
+
+	var response Tx
+	err = dynamodbattribute.Unmarshal(item["tx"], &response)
+	assert.NoError(t, err)
+	fmt.Println(response.Witness.Datums)
 }
