@@ -47,6 +47,23 @@ func TestClient_ChainTip(t *testing.T) {
 	}
 }
 
+func TestClient_EraSummaries(t *testing.T) {
+	endpoint := os.Getenv("OGMIOS")
+	if endpoint == "" {
+		t.SkipNow()
+	}
+
+	ctx := context.Background()
+	client := New(WithEndpoint(endpoint), WithLogger(DefaultLogger))
+	history, err := client.EraSummaries(ctx)
+	if err != nil {
+		t.Fatalf("got %#v; want nil", err)
+	}
+	if len(history.summaries) == 0 {
+		t.Fatalf("got empty era history; want nonempty")
+	}
+}
+
 func TestClient_CurrentEpoch(t *testing.T) {
 	endpoint := os.Getenv("OGMIOS")
 	if endpoint == "" {

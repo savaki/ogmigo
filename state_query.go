@@ -62,6 +62,48 @@ func (c *Client) CurrentProtocolParameters(ctx context.Context) (json.RawMessage
 	return content.Result, nil
 }
 
+type EraHistory struct {
+	summaries []EraSummary
+}
+
+type EraSummary struct {
+	start      EraBound      `json:"start"`
+	end        EraBound      `json:"end"`
+	parameters EraParameters `json:"parameters"`
+}
+
+type EraBound struct {
+	time  uint64 `json:"time"`
+	slot  uint64 `json:"slot"`
+	epoch uint64 `json:"epoch"`
+}
+
+type EraParameters struct {
+	epochLength uint64 `json:"epochLength"`
+	slotLength  uint64 `json:"slotLength"`
+	safeZone    uint64 `json:"safeZone"`
+}
+
+func (c *Client) EraSummaries(ctx context.Context) (*EraHistory, error) {
+	var (
+		payload = makePayload("Query", Map{"query": "eraSummaries"})
+		content struct{ Result json.RawMessage }
+	)
+
+	if err := c.query(ctx, payload, &content); err != nil {
+		return nil, err
+	}
+
+	var summaries []EraSummary
+	if err := json.Unmarshal(content.Result, &summaries); err != nil {
+		return nil, err
+	}
+
+	return &EraHistory{
+		summaries: summaries,
+	}, nil
+}
+
 func (c *Client) EraStart(ctx context.Context) (statequery.EraStart, error) {
 	var (
 		payload = makePayload("Query", Map{"query": "eraStart"})
