@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
 	"github.com/SundaeSwap-finance/ogmigo/ouroboros/statequery"
@@ -73,9 +74,9 @@ type EraSummary struct {
 }
 
 type EraBound struct {
-	Time  uint64 `json:"time"`
-	Slot  uint64 `json:"slot"`
-	Epoch uint64 `json:"epoch"`
+	Time  big.Int `json:"time"` // Picosecond precision, too big for uint64
+	Slot  uint64  `json:"slot"`
+	Epoch uint64  `json:"epoch"`
 }
 
 type EraParameters struct {
