@@ -63,25 +63,25 @@ func (c *Client) CurrentProtocolParameters(ctx context.Context) (json.RawMessage
 }
 
 type EraHistory struct {
-	summaries []EraSummary
+	Summaries []EraSummary
 }
 
 type EraSummary struct {
-	start      EraBound      `json:"start"`
-	end        EraBound      `json:"end"`
-	parameters EraParameters `json:"parameters"`
+	Start      EraBound      `json:"start"`
+	End        EraBound      `json:"end"`
+	Parameters EraParameters `json:"parameters"`
 }
 
 type EraBound struct {
-	time  uint64 `json:"time"`
-	slot  uint64 `json:"slot"`
-	epoch uint64 `json:"epoch"`
+	Time  uint64 `json:"time"`
+	Slot  uint64 `json:"slot"`
+	Epoch uint64 `json:"epoch"`
 }
 
 type EraParameters struct {
-	epochLength uint64 `json:"epochLength"`
-	slotLength  uint64 `json:"slotLength"`
-	safeZone    uint64 `json:"safeZone"`
+	EpochLength uint64 `json:"epochLength"`
+	SlotLength  uint64 `json:"slotLength"`
+	SafeZone    uint64 `json:"safeZone"`
 }
 
 func (c *Client) EraSummaries(ctx context.Context) (*EraHistory, error) {
