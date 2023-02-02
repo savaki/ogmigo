@@ -100,7 +100,7 @@ func (c *Client) EraSummaries(ctx context.Context) (*EraHistory, error) {
 	}
 
 	return &EraHistory{
-		summaries: summaries,
+		Summaries: summaries,
 	}, nil
 }
 
