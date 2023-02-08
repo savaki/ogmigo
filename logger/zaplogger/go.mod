@@ -1,4 +1,4 @@
-module github.com/savaki/ogmigo/logger/zaplogger
+module github.com/SundaeSwap-finance/ogmigo/logger/zaplogger
 
 go 1.17
 

@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
 	"github.com/SundaeSwap-finance/ogmigo/ouroboros/statequery"
@@ -60,6 +61,48 @@ func (c *Client) CurrentProtocolParameters(ctx context.Context) (json.RawMessage
 	}
 
 	return content.Result, nil
+}
+
+type EraHistory struct {
+	Summaries []EraSummary
+}
+
+type EraSummary struct {
+	Start      EraBound      `json:"start"`
+	End        EraBound      `json:"end"`
+	Parameters EraParameters `json:"parameters"`
+}
+
+type EraBound struct {
+	Time  big.Int `json:"time"` // Picosecond precision, too big for uint64
+	Slot  uint64  `json:"slot"`
+	Epoch uint64  `json:"epoch"`
+}
+
+type EraParameters struct {
+	EpochLength uint64 `json:"epochLength"`
+	SlotLength  uint64 `json:"slotLength"`
+	SafeZone    uint64 `json:"safeZone"`
+}
+
+func (c *Client) EraSummaries(ctx context.Context) (*EraHistory, error) {
+	var (
+		payload = makePayload("Query", Map{"query": "eraSummaries"})
+		content struct{ Result json.RawMessage }
+	)
+
+	if err := c.query(ctx, payload, &content); err != nil {
+		return nil, err
+	}
+
+	var summaries []EraSummary
+	if err := json.Unmarshal(content.Result, &summaries); err != nil {
+		return nil, err
+	}
+
+	return &EraHistory{
+		Summaries: summaries,
+	}, nil
 }
 
 func (c *Client) EraStart(ctx context.Context) (statequery.EraStart, error) {
