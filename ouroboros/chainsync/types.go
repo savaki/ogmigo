@@ -360,6 +360,8 @@ func (r RollForwardBlock) PointStruct() PointStruct {
 
 	var block *Block
 	switch {
+	case r.Babbage != nil:
+		block = r.Babbage
 	case r.Allegra != nil:
 		block = r.Allegra
 	case r.Alonzo != nil:
