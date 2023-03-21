@@ -478,12 +478,27 @@ func (tt TxOuts) FindByAssetID(assetID AssetID) (TxOut, bool) {
 	return TxOut{}, false
 }
 
+type HexData []byte
+
+func (h *HexData) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	decoded, err := hex.DecodeString(s)
+	if err != nil {
+		return err
+	}
+	*h = HexData(decoded)
+	return nil
+}
+
 type Witness struct {
-	Bootstrap  []json.RawMessage `json:"bootstrap,omitempty"  dynamodbav:"bootstrap,omitempty"`
-	Datums     map[string][]byte `json:"datums,omitempty"     dynamodbav:"datums,omitempty"`
-	Redeemers  json.RawMessage   `json:"redeemers,omitempty"  dynamodbav:"redeemers,omitempty"`
-	Scripts    json.RawMessage   `json:"scripts,omitempty"    dynamodbav:"scripts,omitempty"`
-	Signatures map[string]string `json:"signatures,omitempty" dynamodbav:"signatures,omitempty"`
+	Bootstrap  []json.RawMessage  `json:"bootstrap,omitempty"  dynamodbav:"bootstrap,omitempty"`
+	Datums     map[string]HexData `json:"datums,omitempty"     dynamodbav:"datums,omitempty"`
+	Redeemers  json.RawMessage    `json:"redeemers,omitempty"  dynamodbav:"redeemers,omitempty"`
+	Scripts    json.RawMessage    `json:"scripts,omitempty"    dynamodbav:"scripts,omitempty"`
+	Signatures map[string]string  `json:"signatures,omitempty" dynamodbav:"signatures,omitempty"`
 }
 
 type ValidityInterval struct {
