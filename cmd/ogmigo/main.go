@@ -25,8 +25,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/savaki/ogmigo"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
+	"github.com/thuannguyen2010/ogmigo"
+	"github.com/thuannguyen2010/ogmigo/ouroboros/chainsync"
 	"github.com/urfave/cli/v2"
 )
 

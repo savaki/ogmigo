@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
+	"github.com/thuannguyen2010/ogmigo/ouroboros/chainsync"
 	"golang.org/x/sync/errgroup"
 )
 

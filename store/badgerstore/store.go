@@ -24,7 +24,7 @@ import (
 	"sync/atomic"
 
 	"github.com/dgraph-io/badger/v3"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
+	"github.com/thuannguyen2010/ogmigo/ouroboros/chainsync"
 )
 
 type Store struct {

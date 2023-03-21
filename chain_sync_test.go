@@ -19,7 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
+	"github.com/thuannguyen2010/ogmigo/ouroboros/chainsync"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"log"

@@ -1,10 +1,10 @@
-module github.com/savaki/ogmigo/store/badgerstore
+module github.com/thuannguyen2010/ogmigo/store/badgerstore
 
 go 1.17
 
 require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
-	github.com/savaki/ogmigo v0.0.0-20211125162343-a2ee2327d4f2
+	github.com/thuannguyen2010/ogmigo v0.0.0-20211125162343-a2ee2327d4f2
 )
 
 require (

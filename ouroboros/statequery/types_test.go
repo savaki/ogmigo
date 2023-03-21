@@ -2,8 +2,8 @@ package statequery
 
 import (
 	"encoding/json"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
-	"github.com/savaki/ogmigo/ouroboros/chainsync/num"
+	"github.com/thuannguyen2010/ogmigo/ouroboros/chainsync"
+	"github.com/thuannguyen2010/ogmigo/ouroboros/chainsync/num"
 	"reflect"
 	"testing"
 )

@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger/v3"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
+	"github.com/thuannguyen2010/ogmigo/ouroboros/chainsync"
 )
 
 func TestStore_Load(t *testing.T) {

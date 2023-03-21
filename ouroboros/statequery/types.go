@@ -3,7 +3,7 @@ package statequery
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/savaki/ogmigo/ouroboros/chainsync"
+	"github.com/thuannguyen2010/ogmigo/ouroboros/chainsync"
 	"time"
 )
 

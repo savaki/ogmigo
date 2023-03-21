@@ -1,4 +1,4 @@
-module github.com/savaki/ogmigo
+module github.com/thuannguyen2010/ogmigo
 
 go 1.16
 

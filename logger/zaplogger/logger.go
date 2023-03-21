@@ -15,7 +15,7 @@
 package zaplogger
 
 import (
-	"github.com/savaki/ogmigo"
+	"github.com/thuannguyen2010/ogmigo"
 	"go.uber.org/zap"
 )
 

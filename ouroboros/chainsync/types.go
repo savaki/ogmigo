@@ -28,7 +28,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/fxamacker/cbor/v2"
-	"github.com/savaki/ogmigo/ouroboros/chainsync/num"
+	"github.com/thuannguyen2010/ogmigo/ouroboros/chainsync/num"
 )
 
 var (

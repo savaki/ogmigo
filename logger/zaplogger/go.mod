@@ -1,9 +1,9 @@
-module github.com/savaki/ogmigo/logger/zaplogger
+module github.com/thuannguyen2010/ogmigo/logger/zaplogger
 
 go 1.17
 
 require (
-	github.com/savaki/ogmigo v0.0.0-20211126023723-be7f2917a196
+
 	go.uber.org/zap v1.19.1
 )
 
