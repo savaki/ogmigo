@@ -341,6 +341,7 @@ type RollForward struct {
 }
 
 type RollForwardBlock struct {
+	Babbage *Block      `json:"babbage,omitempty" dynamodbav:"babbage,omitempty"`
 	Allegra *Block      `json:"allegra,omitempty" dynamodbav:"allegra,omitempty"`
 	Alonzo  *Block      `json:"alonzo,omitempty"  dynamodbav:"alonzo,omitempty"`
 	Byron   *ByronBlock `json:"byron,omitempty"   dynamodbav:"byron,omitempty"`
