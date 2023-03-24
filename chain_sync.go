@@ -162,11 +162,13 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, options ChainSyncOptions) error {
 	conn, _, err := websocket.DefaultDialer.Dial(c.options.endpoint, nil)
 	if err != nil {
+		c.logger.Error(err, "failed to connect to ogmios", KV("endpoint", c.options.endpoint))
 		return fmt.Errorf("failed to connect to ogmios, %v: %w", c.options.endpoint, err)
 	}
 
 	init, err := getInit(ctx, options.store, options.points...)
 	if err != nil {
+		c.logger.Error(err, "failed to create init message")
 		return fmt.Errorf("failed to create init message: %w", err)
 	}
 
@@ -206,6 +208,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 					return nil // connection closed
 				}
 			}
+			c.logger.Error(err, "failed to write FindIntersect")
 			return fmt.Errorf("failed to write FindIntersect: %w", err)
 		}
 
@@ -216,6 +219,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 				return nil
 			case <-ch:
 				if err := conn.WriteMessage(websocket.TextMessage, next); err != nil {
+					c.logger.Error(err, "failed to write RequestNext")
 					return fmt.Errorf("failed to write RequestNext: %w", err)
 				}
 			}
@@ -237,6 +241,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 						return nil // connection closed
 					}
 				}
+				c.logger.Error(err, "failed to read message from ogmios")
 				return fmt.Errorf("failed to read message from ogmios: %w", err)
 			}
 
@@ -244,6 +249,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 			case <-ctx.Done():
 				if point, ok := getPoint(last.list()...); ok {
 					if err := options.store.Save(context.Background(), point); err != nil {
+						c.logger.Error(err, "chainsync client failed")
 						return fmt.Errorf("chainsync client failed: %w", err)
 					}
 				}
@@ -262,6 +268,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 			case websocket.CloseMessage:
 				if point, ok := getPoint(last.list()...); ok {
 					if err := options.store.Save(context.Background(), point); err != nil {
+						c.logger.Error(err, "chainsync client failed")
 						return fmt.Errorf("chainsync client failed: %w", err)
 					}
 				}
@@ -269,6 +276,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 
 			case websocket.PingMessage:
 				if err := conn.WriteMessage(websocket.PongMessage, nil); err != nil {
+					c.logger.Error(err, "failed to respond with pong to ogmios")
 					return fmt.Errorf("failed to respond with pong to ogmios: %w", err)
 				}
 				continue
@@ -293,6 +301,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 			}
 
 			if err := callback(ctx, data); err != nil {
+				c.logger.Error(err, "chainsync stopped: callback failed")
 				return fmt.Errorf("chainsync stopped: callback failed: %w", err)
 			}
 

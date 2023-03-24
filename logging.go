@@ -34,6 +34,7 @@ func KV(key, value string) KeyValue {
 type Logger interface {
 	Debug(message string, kvs ...KeyValue)
 	Info(message string, kvs ...KeyValue)
+	Error(error error, message string, kvs ...KeyValue)
 	With(kvs ...KeyValue) Logger
 }
 
@@ -67,6 +68,10 @@ func (d defaultLogger) Info(message string, kvs ...KeyValue) {
 	d.print(message, kvs...)
 }
 
+func (d defaultLogger) Error(error error, message string, kvs ...KeyValue) {
+	d.print(message, kvs...)
+}
+
 func (d defaultLogger) With(kvs ...KeyValue) Logger {
 	return defaultLogger{
 		kvs: append(d.kvs, kvs...),
@@ -79,6 +84,7 @@ var NopLogger = nopLogger{}
 type nopLogger struct {
 }
 
-func (n nopLogger) Debug(string, ...KeyValue) {}
-func (n nopLogger) Info(string, ...KeyValue)  {}
-func (n nopLogger) With(...KeyValue) Logger   { return n }
+func (n nopLogger) Debug(string, ...KeyValue)        {}
+func (n nopLogger) Info(string, ...KeyValue)         {}
+func (n nopLogger) Error(error, string, ...KeyValue) {}
+func (n nopLogger) With(...KeyValue) Logger          { return n }
