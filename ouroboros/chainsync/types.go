@@ -349,6 +349,23 @@ type RollForwardBlock struct {
 	Shelley *Block      `json:"shelley,omitempty" dynamodbav:"shelley,omitempty"`
 }
 
+func (r RollForwardBlock) Transactions() []Tx {
+	switch {
+	case r.Babbage != nil:
+		return r.Babbage.Body
+	case r.Allegra != nil:
+		return r.Allegra.Body
+	case r.Alonzo != nil:
+		return r.Alonzo.Body
+	case r.Mary != nil:
+		return r.Mary.Body
+	case r.Shelley != nil:
+		return r.Shelley.Body
+	default:
+		return []Tx{}
+	}
+}
+
 func (r RollForwardBlock) PointStruct() PointStruct {
 	if byron := r.Byron; byron != nil {
 		return PointStruct{
