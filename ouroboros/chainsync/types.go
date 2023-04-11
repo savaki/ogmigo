@@ -528,3 +528,33 @@ type Value struct {
 	Coins  num.Int             `json:"coins,omitempty"  dynamodbav:"coins,omitempty"`
 	Assets map[AssetID]num.Int `json:"assets,omitempty" dynamodbav:"assets,omitempty"`
 }
+
+type RedeemerKey string
+
+type RedeemerValue struct {
+	Memory int32 `json:"memory"`
+	Steps  int32 `json:"steps"`
+}
+
+type Redeemer map[RedeemerKey]RedeemerValue
+
+func (r *Redeemer) Unmarshal(data json.RawMessage) error {
+	return json.Unmarshal(data, r)
+}
+
+func (a RedeemerKey) RedeemerTag() string {
+	s := string(a)
+	if index := strings.Index(s, ":"); index > 0 {
+		return s[:index]
+	}
+	return s
+}
+
+func (a RedeemerKey) Index() int {
+	s := string(a)
+	if index := strings.Index(s, ":"); index > 0 {
+		result, _ := strconv.Atoi(s[index+1:])
+		return result
+	}
+	return 0
+}
