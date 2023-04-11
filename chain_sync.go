@@ -242,7 +242,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 					}
 				}
 				c.logger.Error(err, "failed to read message from ogmios")
-				return fmt.Errorf("failed to read message from ogmios: %w", err)
+				return NewWrappedReadMessageError("failed to read message from ogmios: %w", err)
 			}
 
 			select {

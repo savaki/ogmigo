@@ -34,3 +34,23 @@ type Fault struct {
 	Code   string `json:"code,omitempty"`   // Code identifies error
 	String string `json:"string,omitempty"` // String provides human readable description
 }
+
+type WrappedReadMessageError struct {
+	message     string
+	originalErr error
+}
+
+func (e *WrappedReadMessageError) Error() string {
+	return fmt.Sprintf("%s: %v", e.message, e.originalErr)
+}
+
+func (e *WrappedReadMessageError) Temporary() bool {
+	return true
+}
+
+func NewWrappedReadMessageError(message string, originalErr error) error {
+	return &WrappedReadMessageError{
+		message:     message,
+		originalErr: originalErr,
+	}
+}
