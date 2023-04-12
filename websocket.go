@@ -45,7 +45,7 @@ func (c *Client) query(ctx context.Context, payload interface{}, v interface{}) 
 		}
 	}()
 
-	conn, _, err = websocket.DefaultDialer.DialContext(ctx, c.options.endpoint, nil)
+	conn, _, err = c.dialer.DialContext(ctx, c.options.endpoint, nil)
 	if err != nil {
 		return fmt.Errorf("failed to connect to ogmios, %v: %w", c.options.endpoint, err)
 	}

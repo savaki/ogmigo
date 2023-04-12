@@ -14,12 +14,15 @@
 
 package ogmigo
 
+import "time"
+
 // Options available to ogmios client
 type Options struct {
-	endpoint     string
-	logger       Logger
-	pipeline     int
-	saveInterval uint64
+	endpoint         string
+	logger           Logger
+	pipeline         int
+	saveInterval     uint64
+	handshakeTimeout time.Duration
 }
 
 // Option to cardano client
@@ -29,6 +32,13 @@ type Option func(*Options)
 func WithEndpoint(endpoint string) Option {
 	return func(opts *Options) {
 		opts.endpoint = endpoint
+	}
+}
+
+// WithTimeout allows set timeout for handshaking
+func WithTimeout(timeout time.Duration) Option {
+	return func(opts *Options) {
+		opts.handshakeTimeout = timeout
 	}
 }
 

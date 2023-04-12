@@ -14,19 +14,34 @@
 
 package ogmigo
 
+import (
+	"github.com/gorilla/websocket"
+	"net/http"
+	"time"
+)
+
 // Client provides a client for the chain sync protocol only
 type Client struct {
 	logger  Logger
 	options Options
+	dialer  *websocket.Dialer
 }
 
 // New returns a new Client
 func New(opts ...Option) *Client {
 	options := buildOptions(opts...)
 	logger := options.logger.With(KV("service", "ogmios"))
+	dialer := websocket.DefaultDialer
+	if options.handshakeTimeout > 0 {
+		dialer = &websocket.Dialer{
+			Proxy:            http.ProxyFromEnvironment,
+			HandshakeTimeout: options.handshakeTimeout * time.Second,
+		}
+	}
 
 	return &Client{
 		logger:  logger,
 		options: options,
+		dialer:  dialer,
 	}
 }
