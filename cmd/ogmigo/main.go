@@ -16,18 +16,12 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/thuannguyen2010/ogmigo"
+	"github.com/urfave/cli/v2"
 	"log"
 	"os"
 	"os/signal"
-	"regexp"
-	"strconv"
-	"sync/atomic"
-
-	"github.com/thuannguyen2010/ogmigo"
-	"github.com/thuannguyen2010/ogmigo/ouroboros/chainsync"
-	"github.com/urfave/cli/v2"
 )
 
 var opts struct {
@@ -71,60 +65,16 @@ func main() {
 
 func action(_ *cli.Context) error {
 	client := ogmigo.New(
-		ogmigo.WithEndpoint(opts.Ogmios),
+		ogmigo.WithEndpoint("ws://localhost:1337"),
 		ogmigo.WithLogger(ogmigo.DefaultLogger),
 	)
 
-	var (
-		ctx    = context.Background()
-		re     = regexp.MustCompile(`^(\d+)/([a-zA-Z0-9]+)$`)
-		points chainsync.Points
-	)
-
-	for _, s := range opts.Points.Value() {
-		match := re.FindStringSubmatch(s)
-		if len(match) != 3 {
-			return fmt.Errorf("ogmigo: failed to parse point, %v", s)
-		}
-		slot, _ := strconv.ParseUint(match[1], 10, 64)
-		points = append(points, chainsync.PointStruct{
-			Hash: match[2],
-			Slot: slot,
-		}.Point())
-	}
-
-	var counter int64
-	var callback ogmigo.ChainSyncFunc = func(ctx context.Context, data []byte) error {
-		if v := atomic.AddInt64(&counter, 1); v%opts.Tick != 0 {
-			return nil
-		}
-
-		var response chainsync.Response
-		if err := json.Unmarshal(data, &response); err != nil {
-			return err
-		}
-		if response.Result == nil {
-			return nil
-		}
-		if response.Result.RollForward == nil {
-			return nil
-		}
-
-		ps := response.Result.RollForward.Block.PointStruct()
-		fmt.Printf("slot=%v hash=%v block=%v\n", ps.Slot, ps.Hash, ps.BlockNo)
-
-		return nil
-	}
-	closer, err := client.ChainSync(ctx, callback,
-		ogmigo.WithPoints(points...),
-		ogmigo.WithReconnect(true),
-	)
-
+	ctx := context.Background()
+	redeemer, err := client.EvaluateTx(ctx, "")
 	if err != nil {
-		return err
+		panic(err)
 	}
-	defer closer.Close()
-
+	fmt.Println(redeemer)
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Kill, os.Interrupt)
 

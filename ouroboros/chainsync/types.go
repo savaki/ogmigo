@@ -532,8 +532,8 @@ type Value struct {
 type RedeemerKey string
 
 type RedeemerValue struct {
-	Memory int32 `json:"memory"`
-	Steps  int32 `json:"steps"`
+	Memory int64 `json:"memory"`
+	Steps  int64 `json:"steps"`
 }
 
 type Redeemer map[RedeemerKey]RedeemerValue
