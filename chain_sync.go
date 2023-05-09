@@ -372,6 +372,10 @@ func isTemporaryError(err error) bool {
 		return true
 	}
 
+	if ok := errors.Is(err, websocket.ErrBadHandshake); ok {
+		return true
+	}
+
 	var noe *net.OpError
 	if ok := errors.As(err, &noe); ok {
 		var sce *os.SyscallError
