@@ -29,6 +29,11 @@ func Int64(v int64) Int {
 	return Int(*bi)
 }
 
+func Uint64(v uint64) Int {
+	bi := big.NewInt(0).SetUint64(v)
+	return Int(*bi)
+}
+
 func New(s string) (Int, bool) {
 	bi, ok := big.NewInt(0).SetString(s, 10)
 	if !ok {
@@ -54,6 +59,10 @@ func (i Int) Int() int {
 
 func (i Int) Int64() int64 {
 	return i.BigInt().Int64()
+}
+
+func (i Int) Uint64() uint64 {
+	return i.BigInt().Uint64()
 }
 
 func (i Int) MarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
