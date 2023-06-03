@@ -561,3 +561,39 @@ type Value struct {
 	Coins  num.Int             `json:"coins,omitempty"  dynamodbav:"coins,omitempty"`
 	Assets map[AssetID]num.Int `json:"assets,omitempty" dynamodbav:"assets,omitempty"`
 }
+
+func Add(a Value, b Value) Value {
+	var result Value
+	result.Coins = a.Coins.Add(b.Coins)
+	result.Assets = map[AssetID]num.Int{}
+	for assetId, amt := range a.Assets {
+		result.Assets[assetId] = amt
+	}
+	for assetId, amt := range b.Assets {
+		result.Assets[assetId] = result.Assets[assetId].Add(amt)
+	}
+	return result
+}
+func Subtract(a Value, b Value) Value {
+	var result Value
+	result.Coins = a.Coins.Sub(b.Coins)
+	result.Assets = map[AssetID]num.Int{}
+	for assetId, amt := range a.Assets {
+		result.Assets[assetId] = amt
+	}
+	for assetId, amt := range b.Assets {
+		result.Assets[assetId] = result.Assets[assetId].Sub(amt)
+	}
+	return result
+}
+func Enough(have Value, want Value) (bool, error) {
+	if have.Coins.Int64() < want.Coins.Int64() {
+		return false, fmt.Errorf("not enough ADA to meet demand")
+	}
+	for asset, amt := range want.Assets {
+		if have.Assets[asset].Int64() < amt.Int64() {
+			return false, fmt.Errorf("not enough %v to meet demand", asset)
+		}
+	}
+	return true, nil
+}
