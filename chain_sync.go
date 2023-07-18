@@ -31,6 +31,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var (
+	delayPeriods = []time.Duration{5, 10, 20, 40, 80, 160, 300}
+	periodIndex  = 0
+)
+
 // ChainSync provides control over a given ChainSync connection
 type ChainSync struct {
 	cancel context.CancelFunc
@@ -123,14 +128,17 @@ func (c *Client) ChainSync(ctx context.Context, callback ChainSyncFunc, opts ...
 	go func() {
 		defer close(done)
 
-		var (
-			timeout = 10 * time.Second
-			err     error
-		)
+		var err error
+
 		for {
 			err = c.doChainSync(ctx, callback, options)
-			if err != nil && isTemporaryError(err) {
+			if err != nil {
+				// always retry
 				if options.reconnect {
+					timeout := delayPeriods[periodIndex] * time.Second
+					if periodIndex < len(delayPeriods)-1 {
+						periodIndex += 1
+					}
 					c.options.logger.Info("websocket connection error: will retry",
 						KV("delay", timeout.Round(time.Millisecond).String()),
 						KV("err", err.Error()),
@@ -175,6 +183,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 	group, ctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
 		c.options.logger.Info("ogmigo chainsync started")
+		periodIndex = 0 // reset delay period
 		defer c.options.logger.Info("ogmigo chainsync stopped")
 		<-ctx.Done()
 		return nil
