@@ -49,7 +49,7 @@ func (c *Client) SubmitTx(ctx context.Context, data []byte) (err error) {
 	}
 
 	var (
-		payload = makePayload("SubmitTx", Map{"bytes": signedTx})
+		payload = makePayload("SubmitTx", Map{"submit": signedTx})
 		raw     json.RawMessage
 	)
 	if err := c.query(ctx, payload, &raw); err != nil {
