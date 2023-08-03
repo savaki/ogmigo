@@ -558,3 +558,15 @@ func (a RedeemerKey) Index() int {
 	}
 	return 0
 }
+
+type EvaluationResult []EvaluationItem
+
+type EvaluationItem struct {
+	Validator string `json:"validator"`
+	Budget    Budget `json:"budget"`
+}
+
+type Budget struct {
+	Memory int64 `json:"memory"`
+	Cpu    int64 `json:"cpu"`
+}

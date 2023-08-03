@@ -34,9 +34,9 @@ type EvaluationResponse struct {
 
 // EvaluateTx evaluate the execution units of scripts present in a given transaction, without actually submitting the transaction
 // https://ogmios.dev/mini-protocols/local-tx-submission/#evaluatetx
-func (c *Client) EvaluateTx(ctx context.Context, cborHex string) (redeemer chainsync.Redeemer, err error) {
+func (c *Client) EvaluateTx(ctx context.Context, cborHex string) (redeemer chainsync.EvaluationResult, err error) {
 	var (
-		payload = makePayload("EvaluateTx", Map{"evaluate": cborHex})
+		payload = makePayloadV6("evaluateTransaction", Map{"transaction": cborHex})
 		raw     json.RawMessage
 	)
 	if err := c.query(ctx, payload, &raw); err != nil {
@@ -61,15 +61,15 @@ func (s EvaluateTxError) Error() string {
 	return fmt.Sprintf("EvaluateTx failed: %v", string(s.message))
 }
 
-func readEvaluateTx(data []byte) (chainsync.Redeemer, error) {
-	value, dataType, _, err := jsonparser.Get(data, "result", "EvaluationFailure")
+func readEvaluateTx(data []byte) (chainsync.EvaluationResult, error) {
+	value, dataType, _, err := jsonparser.Get(data, "error")
 	if err != nil {
 		if errors.Is(err, jsonparser.KeyPathNotFoundError) {
-			redeemerRaw, _, _, err := jsonparser.Get(data, "result", "EvaluationResult")
+			redeemerRaw, _, _, err := jsonparser.Get(data, "result")
 			if err != nil {
 				return nil, err
 			}
-			var v chainsync.Redeemer
+			var v chainsync.EvaluationResult
 			err = json.Unmarshal(redeemerRaw, &v)
 			if err != nil {
 				return nil, fmt.Errorf("cannot parse result: %v to redeemer: %w", string(value), err)
