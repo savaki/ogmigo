@@ -34,7 +34,7 @@ type EvaluationResponse struct {
 
 // EvaluateTx evaluate the execution units of scripts present in a given transaction, without actually submitting the transaction
 // https://ogmios.dev/mini-protocols/local-tx-submission/#evaluatetx
-func (c *Client) EvaluateTx(ctx context.Context, cborHex string) (redeemer chainsync.EvaluationResult, err error) {
+func (c *Client) EvaluateTx(ctx context.Context, cborHex string) (redeemer chainsync.Redeemer, err error) {
 	var (
 		payload = makePayloadV6("evaluateTransaction", Map{"transaction": cborHex})
 		raw     json.RawMessage
@@ -61,7 +61,7 @@ func (s EvaluateTxError) Error() string {
 	return fmt.Sprintf("EvaluateTx failed: %v", string(s.message))
 }
 
-func readEvaluateTx(data []byte) (chainsync.EvaluationResult, error) {
+func readEvaluateTx(data []byte) (chainsync.Redeemer, error) {
 	value, dataType, _, err := jsonparser.Get(data, "error")
 	if err != nil {
 		if errors.Is(err, jsonparser.KeyPathNotFoundError) {
@@ -74,7 +74,14 @@ func readEvaluateTx(data []byte) (chainsync.EvaluationResult, error) {
 			if err != nil {
 				return nil, fmt.Errorf("cannot parse result: %v to redeemer: %w", string(value), err)
 			}
-			return v, nil
+			var result chainsync.Redeemer
+			for _, item := range v {
+				var redeemerValue chainsync.RedeemerValue
+				redeemerValue.Memory = item.Budget.Memory
+				redeemerValue.Steps = item.Budget.Cpu
+				result[chainsync.RedeemerKey(item.Validator)] = redeemerValue
+			}
+			return result, nil
 		}
 		return nil, fmt.Errorf("failed to parse EvaluateTx response: %w", err)
 	}
