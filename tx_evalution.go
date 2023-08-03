@@ -74,11 +74,11 @@ func readEvaluateTx(data []byte) (chainsync.Redeemer, error) {
 			if err != nil {
 				return nil, fmt.Errorf("cannot parse result: %v to redeemer: %w", string(value), err)
 			}
-			var result chainsync.Redeemer
+			result := make(chainsync.Redeemer)
 			for _, item := range v {
 				var redeemerValue chainsync.RedeemerValue
 				redeemerValue.Memory = item.Budget.Memory
-				redeemerValue.Steps = item.Budget.Cpu
+				redeemerValue.Steps = item.Budget.Steps
 				result[chainsync.RedeemerKey(item.Validator)] = redeemerValue
 			}
 			return result, nil
