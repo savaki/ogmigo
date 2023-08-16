@@ -568,5 +568,5 @@ type EvaluationItem struct {
 
 type Budget struct {
 	Memory int64 `json:"memory"`
-	Steps  int64 `json:"steps"`
+	Steps  int64 `json:"cpu"`
 }
