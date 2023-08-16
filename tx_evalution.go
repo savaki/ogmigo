@@ -76,7 +76,7 @@ func readEvaluateTx(data []byte) (chainsync.Redeemer, error) {
 // https://ogmios.dev/mini-protocols/local-tx-submission/#evaluatetx
 func (c *Client) EvaluateTxV6(ctx context.Context, cborHex string) (redeemer chainsync.Redeemer, err error) {
 	var (
-		payload = makePayloadV6("evaluateTransaction", Map{"transaction": cborHex})
+		payload = makePayloadV6("evaluateTransaction", Map{"transaction": Map{"cbor": cborHex}})
 		raw     json.RawMessage
 	)
 	if err := c.query(ctx, payload, &raw); err != nil {
