@@ -71,6 +71,7 @@ type ChainSyncOptions struct {
 	points    chainsync.Points // points to attempt initial intersection
 	reconnect bool             // reconnect to ogmios if connection drops
 	store     Store            // store of points
+	useV6     bool             // useV6 decides using v6 or v5 payload
 }
 
 func buildChainSyncOptions(opts ...ChainSyncOption) ChainSyncOptions {
@@ -98,6 +99,13 @@ func WithMinSlot(slot uint64) ChainSyncOption {
 func WithPoints(points ...chainsync.Point) ChainSyncOption {
 	return func(opts *ChainSyncOptions) {
 		opts.points = points
+	}
+}
+
+// WithUseV6 decides using ogmios v6 or v5 interface
+func WithUseV6(useV6 bool) ChainSyncOption {
+	return func(opts *ChainSyncOptions) {
+		opts.useV6 = useV6
 	}
 }
 
@@ -173,8 +181,14 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 		c.logger.Error(err, "failed to connect to ogmios", KV("endpoint", c.options.endpoint))
 		return fmt.Errorf("failed to connect to ogmios, %v: %w", c.options.endpoint, err)
 	}
-
-	init, err := getInit(ctx, options.store, options.points...)
+	var init, next []byte
+	if options.useV6 {
+		next = []byte(`{"jsonrpc":"2.0","method":"nextBlock"}`)
+		init, err = getInitV6(ctx, options.store, options.points...)
+	} else {
+		next = []byte(`{"type":"jsonwsp/request","version":"1.0","servicename":"ogmios","methodname":"RequestNext","args":{}}`)
+		init, err = getInit(ctx, options.store, options.points...)
+	}
 	if err != nil {
 		c.logger.Error(err, "failed to create init message")
 		return fmt.Errorf("failed to create init message: %w", err)
@@ -221,7 +235,6 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 			return fmt.Errorf("failed to write FindIntersect: %w", err)
 		}
 
-		next := []byte(`{"jsonrpc":"2.0","method":"nextBlock"}`)
 		for {
 			select {
 			case <-ctx.Done():
@@ -343,12 +356,39 @@ func getInit(ctx context.Context, store Store, pp ...chainsync.Point) (data []by
 	if len(points) > 5 {
 		points = points[0:5]
 	}
+
+	init := Map{
+		"type":        "jsonwsp/request",
+		"version":     "1.0",
+		"servicename": "ogmios",
+		"methodname":  "FindIntersect",
+		"args":        Map{"points": points},
+		"mirror":      Map{"step": "INIT"},
+	}
+	return json.Marshal(init)
+}
+
+func getInitV6(ctx context.Context, store Store, pp ...chainsync.Point) (data []byte, err error) {
+	points, err := store.Load(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve points from store: %w", err)
+	}
+	if len(points) == 0 {
+		points = append(points, pp...)
+	}
+	if len(points) == 0 {
+		points = append(points, chainsync.Origin)
+	}
+	sort.Sort(points)
+	if len(points) > 5 {
+		points = points[0:5]
+	}
+	pointsV6 := points.ConvertToV6()
 	init := Map{
 		"jsonrpc": "2.0",
 		"method":  "findIntersection",
 		"params": Map{
-			"points": []Map{},
-			//"points": []Map{{"id": "0f5316ecb781225b791ce7a0659a09ad5b0150532bacd2de41ad834f4926461e", "slot": 21802984}},
+			"points": pointsV6,
 		},
 		"id": "findIntersect",
 	}

@@ -68,6 +68,8 @@ type PointV6 struct {
 	pointStruct *PointStructV6
 }
 
+type PointsV6 []PointV6
+
 type PointStructV6 struct {
 	ID   string `json:"id,omitempty"`
 	Slot uint64 `json:"slot,omitempty"`
@@ -101,44 +103,92 @@ func (p *PointV6) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (v *PointV6) convertToV5Response() Point {
+func (p *PointV6) convertToV5() Point {
 	var pointStruct *PointStruct
-	if v.pointStruct != nil {
+	if p.pointStruct != nil {
 		pointStruct = &PointStruct{
-			Hash: v.pointStruct.ID,
-			Slot: v.pointStruct.Slot,
+			Hash: p.pointStruct.ID,
+			Slot: p.pointStruct.Slot,
 		}
 	}
 	return Point{
-		pointType:   v.pointType,
-		pointString: v.pointString,
+		pointType:   p.pointType,
+		pointString: p.pointString,
 		pointStruct: pointStruct,
 	}
 }
 
-func (responseV6 ResponseV6) convertToV5Response() Response {
-	response := Response{
+func (p PointV6) MarshalJSON() ([]byte, error) {
+	switch p.pointType {
+	case PointTypeString:
+		return json.Marshal(p.pointString)
+	case PointTypeStruct:
+		return json.Marshal(p.pointStruct)
+	default:
+		return nil, fmt.Errorf("unable to unmarshal Point: unknown type")
+	}
+}
+
+func (p *Point) ConvertToV6() PointV6 {
+	var pointStruct *PointStructV6
+	if p.pointStruct != nil {
+		pointStruct = &PointStructV6{
+			ID:   p.pointStruct.Hash,
+			Slot: p.pointStruct.Slot,
+		}
+	}
+	return PointV6{
+		pointType:   p.pointType,
+		pointString: p.pointString,
+		pointStruct: pointStruct,
+	}
+}
+
+func (pp Points) ConvertToV6() PointsV6 {
+	var result PointsV6
+	for _, p := range pp {
+		result = append(result, p.ConvertToV6())
+	}
+	return result
+}
+
+func (responseV6 ResponseV6) ConvertToV5() (response Response) {
+	response = Response{
 		Type:        responseV6.Jsonrpc,
 		Version:     responseV6.Jsonrpc,
 		ServiceName: "ogmios",
 		MethodName:  responseV6.Method,
 		Result:      nil,
 	}
-	// intersection found
-	if responseV6.Result.Intersection != nil {
-		response.Result = &Result{
-			IntersectionFound: &IntersectionFound{
-				Point: responseV6.Result.Intersection.convertToV5Response(),
-			},
-		}
-		return response
-	}
 	// intersection not found
 	if responseV6.Result.Error != nil {
 		response.Result = &Result{
 			IntersectionNotFound: &IntersectionNotFound{},
 		}
-		return response
+		return
+	}
+	// defend result is nil
+	if responseV6.Result == nil {
+		return
+	}
+	// intersection found
+	if responseV6.Result.Intersection != nil {
+		response.Result = &Result{
+			IntersectionFound: &IntersectionFound{
+				Point: responseV6.Result.Intersection.convertToV5(),
+			},
+		}
+		return
+	}
+	// roll backward
+	if responseV6.Result.Direction == "backward" {
+		response.Result = &Result{
+			RollBackward: &RollBackward{},
+		}
+	}
+	// roll forward block
+	if responseV6.Result.BlockV6 == nil {
+		return
 	}
 	var txs []Tx
 	for _, txV6 := range responseV6.Result.BlockV6.Transactions {
@@ -201,7 +251,7 @@ func (responseV6 ResponseV6) convertToV5Response() Response {
 	}
 	var rollForwardBlock RollForwardBlock
 	switch responseV6.Result.BlockV6.Era {
-	case "shelley", "allegra", "mary", "alonzo", "babbage":
+	case "shelley", "allegra", "mary", "alonzo", "babbage", "conway":
 		rollForwardBlock = RollForwardBlock{
 			Babbage: &block,
 		}

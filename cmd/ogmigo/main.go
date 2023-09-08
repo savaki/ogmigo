@@ -24,8 +24,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"regexp"
-	"strconv"
 )
 
 var opts struct {
@@ -69,43 +67,45 @@ func main() {
 
 func action(_ *cli.Context) error {
 	client := ogmigo.New(
-		ogmigo.WithEndpoint("ws://172.16.61.4:1337"),
+		ogmigo.WithEndpoint("ws://172.0.0.1:1337"),
 		ogmigo.WithLogger(ogmigo.DefaultLogger),
 	)
 
 	var (
 		ctx    = context.Background()
-		re     = regexp.MustCompile(`^(\d+)/([a-zA-Z0-9]+)$`)
 		points chainsync.Points
 	)
-
-	for _, s := range opts.Points.Value() {
-		match := re.FindStringSubmatch(s)
-		if len(match) != 3 {
-			return fmt.Errorf("ogmigo: failed to parse point, %v", s)
-		}
-		slot, _ := strconv.ParseUint(match[1], 10, 64)
-		points = append(points, chainsync.PointStruct{
-			Hash: match[2],
-			Slot: slot,
-		}.Point())
+	points = []chainsync.Point{
+		chainsync.PointStruct{
+			BlockNo: 1009189,
+			Hash:    "b95423b8778536cf9a53e8855cef2bd8702f79ffa3c918b8857437cfb238474d",
+			Slot:    23003752,
+		}.Point(),
 	}
-
+	//useV6 := false
+	useV6 := true
 	var callback ogmigo.ChainSyncFunc = func(ctx context.Context, data []byte) error {
-
-		var response chainsync.ResponseV6
-		if err := json.Unmarshal(data, &response); err != nil {
-			return err
+		var response chainsync.Response
+		if useV6 {
+			var resV6 chainsync.ResponseV6
+			if err := json.Unmarshal(data, &resV6); err != nil {
+				return err
+			}
+			response = resV6.ConvertToV5()
+		} else {
+			if err := json.Unmarshal(data, &response); err != nil {
+				return err
+			}
 		}
+
 		if response.Result == nil {
 			return nil
 		}
-		if response.Result.Direction == "forward" {
-			fmt.Println(response.Result)
-			return nil
+		if response.Result.RollForward != nil {
+			ps := response.Result.RollForward.Block.PointStruct()
+			fmt.Println("blockNo", ps.BlockNo, "hash", ps.Hash, "slot", ps.Slot)
 		}
-		if response.Result.Direction == "backward" {
-			fmt.Println(response.Result)
+		if response.Result.RollBackward != nil {
 			return nil
 		}
 
@@ -117,6 +117,7 @@ func action(_ *cli.Context) error {
 	closer, err := client.ChainSync(ctx, callback,
 		ogmigo.WithPoints(points...),
 		ogmigo.WithReconnect(true),
+		ogmigo.WithUseV6(useV6),
 	)
 
 	if err != nil {
