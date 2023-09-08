@@ -221,7 +221,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 			return fmt.Errorf("failed to write FindIntersect: %w", err)
 		}
 
-		next := []byte(`{"type":"jsonwsp/request","version":"1.0","servicename":"ogmios","methodname":"RequestNext","args":{}}`)
+		next := []byte(`{"jsonrpc":"2.0","method":"nextBlock"}`)
 		for {
 			select {
 			case <-ctx.Done():
@@ -343,15 +343,16 @@ func getInit(ctx context.Context, store Store, pp ...chainsync.Point) (data []by
 	if len(points) > 5 {
 		points = points[0:5]
 	}
-
 	init := Map{
-		"type":        "jsonwsp/request",
-		"version":     "1.0",
-		"servicename": "ogmios",
-		"methodname":  "FindIntersect",
-		"args":        Map{"points": points},
-		"mirror":      Map{"step": "INIT"},
+		"jsonrpc": "2.0",
+		"method":  "findIntersection",
+		"params": Map{
+			"points": []Map{},
+			//"points": []Map{{"id": "0f5316ecb781225b791ce7a0659a09ad5b0150532bacd2de41ad834f4926461e", "slot": 21802984}},
+		},
+		"id": "findIntersect",
 	}
+
 	return json.Marshal(init)
 }
 
