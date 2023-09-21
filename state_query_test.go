@@ -59,7 +59,7 @@ func TestClient_EraSummaries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got %#v; want nil", err)
 	}
-	if len(history.summaries) == 0 {
+	if len(history.Summaries) == 0 {
 		t.Fatalf("got empty era history; want nonempty")
 	}
 }
