@@ -28,7 +28,7 @@ import (
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 
-	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
 )
 
 func TestClient_ChainSync(t *testing.T) {

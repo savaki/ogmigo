@@ -29,7 +29,7 @@ import (
 	"github.com/gorilla/websocket"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
 )
 
 // ChainSync provides control over a given ChainSync connection

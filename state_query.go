@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
-	"github.com/SundaeSwap-finance/ogmigo/ouroboros/statequery"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/statequery"
 )
 
 func (c *Client) ChainTip(ctx context.Context) (chainsync.Point, error) {
