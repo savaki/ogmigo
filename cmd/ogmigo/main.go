@@ -26,7 +26,7 @@ import (
 	"sync/atomic"
 
 	"github.com/SundaeSwap-finance/ogmigo"
-	"github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
 	"github.com/urfave/cli/v2"
 )
 
