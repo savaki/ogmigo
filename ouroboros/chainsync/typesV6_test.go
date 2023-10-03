@@ -88,7 +88,21 @@ func assertStructMatchesSchemaV6(t *testing.T) filepath.WalkFunc {
 	}
 }
 
-func TestByronBFT(t *testing.T) {
+// func TestPraosRequest(t *testing.T) {
+// 	data := `{
+// 		"jsonrpc": "2.0",
+// 		"method": "nextBlock",
+// 		"id": "FN46wUpZUZXP"
+// 	}
+// `
+// 	var request RequestNextV6
+// 	err := json.Unmarshal([]byte(data), &request)
+// 	if err != nil {
+// 		t.Fatalf("error unmarshalling response: %v", err)
+// 	}
+// }
+
+func TestByronBFTResponse(t *testing.T) {
 	data := `{
 		"jsonrpc": "2.0",
 		"method": "nextBlock",
@@ -177,7 +191,7 @@ func TestByronBFT(t *testing.T) {
 	}
 }
 
-func TestByronEBB(t *testing.T) {
+func TestByronEBBResponse(t *testing.T) {
 	data := `{
 		"jsonrpc": "2.0",
 		"method": "nextBlock",
@@ -206,7 +220,7 @@ func TestByronEBB(t *testing.T) {
 	}
 }
 
-func TestPraos(t *testing.T) {
+func TestPraosResponse(t *testing.T) {
 	data := `{
 		"jsonrpc": "2.0",
 		"method": "nextBlock",

@@ -337,6 +337,33 @@ func getInit(ctx context.Context, store Store, pp ...chainsync.Point) (data []by
 	return json.Marshal(init)
 }
 
+// TODO: Properly handle the context. This is a temporary hack to move the Point
+// into the proper JSON container.
+func getInitV6(ctx context.Context, store Store, pp ...chainsync.PointV6) (data []byte, err error) {
+	points, err := store.LoadV6(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve points from store: %w", err)
+	}
+	if len(points) == 0 {
+		points = append(points, pp...)
+	}
+	if len(points) == 0 {
+		points = append(points, chainsync.OriginV6)
+	}
+	sort.Sort(points)
+	if len(points) > 5 {
+		points = points[0:5]
+	}
+
+	init := Map{
+		"jsonrpc": "2.0",
+		"method":  "findIntersection",
+		"params":  Map{"points": points},
+		"id":      Map{"step": "INIT"},
+	}
+	return json.Marshal(init)
+}
+
 // getPoint returns the first point from the list of json encoded chainsync.Responses provided
 // multiple Responses allow for the possibility of a Rollback being included in the set
 func getPoint(data ...[]byte) (chainsync.Point, bool) {

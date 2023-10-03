@@ -16,7 +16,9 @@ package chainsync
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync/num"
 )
@@ -115,8 +117,8 @@ type TxV6 struct {
 }
 
 type TxInV6 struct {
-	Transaction TxInIdV6 `json:"transaction"    dynamodbav:"transaction"`
-	Index       int      `json:"index" dynamodbav:"index"`
+	Transaction TxInIdV6 `json:"transaction" dynamodbav:"transaction"`
+	Index       int      `json:"index"       dynamodbav:"index"`
 }
 
 type TxInIdV6 struct {
@@ -154,4 +156,76 @@ type TipV6 struct {
 	Slot   uint64 `json:"slot,omitempty"   dynamodbav:"slot,omitempty"`
 	ID     string `json:"id,omitempty"     dynamodbav:"id,omitempty"`
 	Height uint64 `json:"height,omitempty" dynamodbav:"height,omitempty"`
+}
+
+type PointStructV6 struct {
+	BlockNo uint64 `json:"blockNo,omitempty" dynamodbav:"blockNo,omitempty"`
+	ID      string `json:"id,omitempty"      dynamodbav:"id,omitempty"`
+	Slot    uint64 `json:"slot,omitempty"    dynamodbav:"slot,omitempty"`
+}
+
+var OriginV6 = PointString("origin").PointV6()
+
+func (p PointStructV6) Point() PointV6 {
+	return PointV6{
+		pointType:   PointTypeStruct,
+		pointStruct: &p,
+	}
+}
+
+type PointV6 struct {
+	pointType   PointType
+	pointString PointString
+	pointStruct *PointStructV6
+}
+
+func (p PointV6) String() string {
+	switch p.pointType {
+	case PointTypeString:
+		return string(p.pointString)
+	case PointTypeStruct:
+		if p.pointStruct.BlockNo == 0 {
+			return fmt.Sprintf("slot=%v id=%v", p.pointStruct.Slot, p.pointStruct.ID)
+		}
+		return fmt.Sprintf("slot=%v id=%v block=%v", p.pointStruct.Slot, p.pointStruct.ID, p.pointStruct.BlockNo)
+	default:
+		return "invalid point"
+	}
+}
+
+type PointsV6 []PointV6
+
+func (pp PointsV6) String() string {
+	var ss []string
+	for _, p := range pp {
+		ss = append(ss, p.String())
+	}
+	return strings.Join(ss, ", ")
+}
+
+func (pp PointsV6) Len() int      { return len(pp) }
+func (pp PointsV6) Swap(i, j int) { pp[i], pp[j] = pp[j], pp[i] }
+func (pp PointsV6) Less(i, j int) bool {
+	pi, pj := pp[i], pp[j]
+	switch {
+	case pi.pointType == PointTypeStruct && pj.pointType == PointTypeStruct:
+		return pi.pointStruct.Slot > pj.pointStruct.Slot
+	case pi.pointType == PointTypeStruct:
+		return true
+	case pj.pointType == PointTypeStruct:
+		return false
+	default:
+		return pi.pointString > pj.pointString
+	}
+}
+
+func (p PointV6) MarshalJSON() ([]byte, error) {
+	switch p.pointType {
+	case PointTypeString:
+		return json.Marshal(p.pointString)
+	case PointTypeStruct:
+		return json.Marshal(p.pointStruct)
+	default:
+		return nil, fmt.Errorf("unable to unmarshal Point: unknown type")
+	}
 }

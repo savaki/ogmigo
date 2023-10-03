@@ -137,6 +137,14 @@ func (p PointString) Point() Point {
 	}
 }
 
+// TODO - Move this to Point.
+func (p PointString) PointV6() PointV6 {
+	return PointV6{
+		pointType:   PointTypeString,
+		pointString: p,
+	}
+}
+
 type PointStruct struct {
 	BlockNo uint64 `json:"blockNo,omitempty" dynamodbav:"blockNo,omitempty"`
 	Hash    string `json:"hash,omitempty"    dynamodbav:"hash,omitempty"`

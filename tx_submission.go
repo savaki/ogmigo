@@ -138,3 +138,32 @@ func readSubmitTx(data []byte) error {
 		return fmt.Errorf("SubmitTx failed: %v", string(value))
 	}
 }
+
+// TODO - Fine tune the error handling. Unsure precisely how to handle it.
+func readSubmitTxV6(data []byte) error {
+	value, dataType, _, err := jsonparser.Get(data, "error")
+	if err != nil {
+		if errors.Is(err, jsonparser.KeyPathNotFoundError) {
+			return nil
+		}
+		return fmt.Errorf("failed to parse SubmitTx response: %w", err)
+	}
+
+	switch dataType {
+	case jsonparser.Array:
+		var messages []json.RawMessage
+		if err := json.Unmarshal(value, &messages); err != nil {
+			return fmt.Errorf("failed to parse SubmitTx response: array: %w", err)
+		}
+		if len(messages) == 0 {
+			return nil
+		}
+		return SubmitTxError{messages: messages}
+
+	case jsonparser.Object:
+		return SubmitTxError{messages: []json.RawMessage{value}}
+
+	default:
+		return fmt.Errorf("SubmitTx failed: %v", string(value))
+	}
+}

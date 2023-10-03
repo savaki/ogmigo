@@ -95,8 +95,13 @@ func (e echoStore) Load(context.Context) (chainsync.Points, error) {
 	return nil, nil
 }
 
+func (e echoStore) LoadV6(context.Context) (chainsync.PointsV6, error) {
+	return nil, nil
+}
+
 type mockStore struct {
-	pp chainsync.Points
+	pp   chainsync.Points
+	ppV6 chainsync.PointsV6
 }
 
 func (m mockStore) Save(_ context.Context, p chainsync.Point) error {
@@ -105,6 +110,10 @@ func (m mockStore) Save(_ context.Context, p chainsync.Point) error {
 
 func (m mockStore) Load(context.Context) (chainsync.Points, error) {
 	return m.pp, nil
+}
+
+func (m mockStore) LoadV6(context.Context) (chainsync.PointsV6, error) {
+	return m.ppV6, nil
 }
 
 func Test_getInit(t *testing.T) {
@@ -117,6 +126,16 @@ func Test_getInit(t *testing.T) {
 	p2 := chainsync.PointStruct{
 		BlockNo: 321,
 		Hash:    "hash",
+		Slot:    654,
+	}
+	p1V6 := chainsync.PointStructV6{
+		BlockNo: 123,
+		ID:      "hash",
+		Slot:    456,
+	}
+	p2V6 := chainsync.PointStructV6{
+		BlockNo: 321,
+		ID:      "hash",
 		Slot:    654,
 	}
 
@@ -135,6 +154,21 @@ func Test_getInit(t *testing.T) {
 		}
 	})
 
+	t.Run("from store V6", func(t *testing.T) {
+		store := mockStore{
+			ppV6: chainsync.PointsV6{p1V6.Point()},
+		}
+		points, err := getInitV6(ctx, store, p2V6.Point())
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		want := `{"id":{"step":"INIT"},"jsonrpc":"2.0","method":"findIntersection","params":{"points":[{"blockNo":123,"id":"hash","slot":456}]}}`
+		if got := string(points); got != want {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+	})
+
 	t.Run("from points", func(t *testing.T) {
 		store := mockStore{}
 		points, err := getInit(ctx, store, p1.Point())
@@ -143,6 +177,19 @@ func Test_getInit(t *testing.T) {
 		}
 
 		want := `{"args":{"points":[{"blockNo":123,"hash":"hash","slot":456}]},"methodname":"FindIntersect","mirror":{"step":"INIT"},"servicename":"ogmios","type":"jsonwsp/request","version":"1.0"}`
+		if got := string(points); got != want {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+	})
+
+	t.Run("from pointsV6", func(t *testing.T) {
+		store := mockStore{}
+		points, err := getInitV6(ctx, store, p1V6.Point())
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		want := `{"id":{"step":"INIT"},"jsonrpc":"2.0","method":"findIntersection","params":{"points":[{"blockNo":123,"id":"hash","slot":456}]}}`
 		if got := string(points); got != want {
 			t.Fatalf("got %v; want %v", got, want)
 		}
