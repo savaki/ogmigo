@@ -10,7 +10,7 @@ import (
 func TestNewLoggingStore(t *testing.T) {
 	p := chainsync.PointStruct{
 		BlockNo: 123,
-		Hash:    "hash",
+		ID:      "hash",
 		Slot:    456,
 	}
 

@@ -39,7 +39,7 @@ func TestClient_ChainTip(t *testing.T) {
 	if !ok {
 		t.Fatalf("got false; want true")
 	}
-	if ps.Hash == "" {
+	if ps.ID == "" {
 		t.Fatalf("got blank; want not blank")
 	}
 	if ps.Slot == 0 {

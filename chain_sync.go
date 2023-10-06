@@ -327,35 +327,6 @@ func getInit(ctx context.Context, store Store, pp ...chainsync.Point) (data []by
 	}
 
 	init := Map{
-		"type":        "jsonwsp/request",
-		"version":     "1.0",
-		"servicename": "ogmios",
-		"methodname":  "FindIntersect",
-		"args":        Map{"points": points},
-		"mirror":      Map{"step": "INIT"},
-	}
-	return json.Marshal(init)
-}
-
-// TODO: Properly handle the context. This is a temporary hack to move the Point
-// into the proper JSON container.
-func getInitV6(ctx context.Context, store Store, pp ...chainsync.PointV6) (data []byte, err error) {
-	points, err := store.LoadV6(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve points from store: %w", err)
-	}
-	if len(points) == 0 {
-		points = append(points, pp...)
-	}
-	if len(points) == 0 {
-		points = append(points, chainsync.OriginV6)
-	}
-	sort.Sort(points)
-	if len(points) > 5 {
-		points = points[0:5]
-	}
-
-	init := Map{
 		"jsonrpc": "2.0",
 		"method":  "findIntersection",
 		"params":  Map{"points": points},
@@ -366,17 +337,22 @@ func getInitV6(ctx context.Context, store Store, pp ...chainsync.PointV6) (data 
 
 // getPoint returns the first point from the list of json encoded chainsync.Responses provided
 // multiple Responses allow for the possibility of a Rollback being included in the set
+// TODO - RollForward has a block. RollBackward has a point. How do we handle this?
 func getPoint(data ...[]byte) (chainsync.Point, bool) {
 	for _, d := range data {
 		if len(d) == 0 {
 			continue
 		}
 
-		var response chainsync.Response
+		var response chainsync.ResponsePraos
 		if err := json.Unmarshal(d, &response); err == nil {
-			if response.Result != nil && response.Result.RollForward != nil {
-				ps := response.Result.RollForward.Block.PointStruct()
-				return ps.Point(), true
+			if response.Result != nil {
+				if response.Result.Direction == "forward" {
+					ps := response.Result.Block.PointStruct()
+					return ps.Point(), true
+				} else if response.Result.Direction == "backward" {
+					return response.Result.Point, true
+				}
 			}
 		}
 	}

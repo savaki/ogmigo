@@ -29,8 +29,6 @@ type Store interface {
 	Save(ctx context.Context, point chainsync.Point) error
 	// Load saved points
 	Load(ctx context.Context) (chainsync.Points, error)
-	// TODO - Just a temp funct while getting V6 off the ground.
-	LoadV6(ctx context.Context) (chainsync.PointsV6, error)
 }
 
 type loggingStore struct {
@@ -49,7 +47,7 @@ func (l *loggingStore) Save(_ context.Context, point chainsync.Point) error {
 	if ps, ok := point.PointStruct(); ok {
 		kvs = append(kvs, KV("slot", strconv.FormatUint(ps.Slot, 10)))
 		kvs = append(kvs, KV("block", strconv.FormatUint(ps.BlockNo, 10)))
-		kvs = append(kvs, KV("hash", ps.Hash))
+		kvs = append(kvs, KV("id", ps.ID))
 	}
 	l.logger.Info("save point", kvs...)
 	return nil
@@ -59,13 +57,8 @@ func (l *loggingStore) Load(_ context.Context) (chainsync.Points, error) {
 	return nil, nil
 }
 
-func (l *loggingStore) LoadV6(_ context.Context) (chainsync.PointsV6, error) {
-	return nil, nil
-}
-
 type nopStore struct {
 }
 
-func (n nopStore) Save(context.Context, chainsync.Point) error        { return nil }
-func (n nopStore) Load(context.Context) (chainsync.Points, error)     { return nil, nil }
-func (n nopStore) LoadV6(context.Context) (chainsync.PointsV6, error) { return nil, nil }
+func (n nopStore) Save(context.Context, chainsync.Point) error    { return nil }
+func (n nopStore) Load(context.Context) (chainsync.Points, error) { return nil, nil }

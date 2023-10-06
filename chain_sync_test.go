@@ -48,7 +48,7 @@ func TestClient_ChainSync(t *testing.T) {
 
 	client := New(WithEndpoint(endpoint))
 	var callback ChainSyncFunc = func(ctx context.Context, data []byte) error {
-		var response chainsync.Response
+		var response chainsync.ResponsePraos
 		decoder := json.NewDecoder(bytes.NewReader(data)) // use decoder to check for unknown fields
 		decoder.DisallowUnknownFields()
 
@@ -61,10 +61,8 @@ func TestClient_ChainSync(t *testing.T) {
 		read += int64(len(data))
 		if v := atomic.AddInt64(&counter, 1); v%1e3 == 0 {
 			var blockNo uint64
-			if response.Result != nil && response.Result.RollForward != nil {
-				if ps, ok := response.Result.RollForward.Tip.PointStruct(); ok {
-					blockNo = ps.BlockNo
-				}
+			if response.Result != nil && response.Result.Direction == "forward" {
+				blockNo = response.Result.Block.Height
 			}
 			log.Printf("read: block=%v, n=%v, read=%v", blockNo, p.Sprintf("%d", v), p.Sprintf("%d", read))
 		}
@@ -95,13 +93,8 @@ func (e echoStore) Load(context.Context) (chainsync.Points, error) {
 	return nil, nil
 }
 
-func (e echoStore) LoadV6(context.Context) (chainsync.PointsV6, error) {
-	return nil, nil
-}
-
 type mockStore struct {
-	pp   chainsync.Points
-	ppV6 chainsync.PointsV6
+	pp chainsync.Points
 }
 
 func (m mockStore) Save(_ context.Context, p chainsync.Point) error {
@@ -112,28 +105,14 @@ func (m mockStore) Load(context.Context) (chainsync.Points, error) {
 	return m.pp, nil
 }
 
-func (m mockStore) LoadV6(context.Context) (chainsync.PointsV6, error) {
-	return m.ppV6, nil
-}
-
 func Test_getInit(t *testing.T) {
 	ctx := context.Background()
 	p1 := chainsync.PointStruct{
 		BlockNo: 123,
-		Hash:    "hash",
-		Slot:    456,
-	}
-	p2 := chainsync.PointStruct{
-		BlockNo: 321,
-		Hash:    "hash",
-		Slot:    654,
-	}
-	p1V6 := chainsync.PointStructV6{
-		BlockNo: 123,
 		ID:      "hash",
 		Slot:    456,
 	}
-	p2V6 := chainsync.PointStructV6{
+	p2 := chainsync.PointStruct{
 		BlockNo: 321,
 		ID:      "hash",
 		Slot:    654,
@@ -154,21 +133,6 @@ func Test_getInit(t *testing.T) {
 		}
 	})
 
-	t.Run("from store V6", func(t *testing.T) {
-		store := mockStore{
-			ppV6: chainsync.PointsV6{p1V6.Point()},
-		}
-		points, err := getInitV6(ctx, store, p2V6.Point())
-		if err != nil {
-			t.Fatalf("got %v; want nil", err)
-		}
-
-		want := `{"id":{"step":"INIT"},"jsonrpc":"2.0","method":"findIntersection","params":{"points":[{"blockNo":123,"id":"hash","slot":456}]}}`
-		if got := string(points); got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
-	})
-
 	t.Run("from points", func(t *testing.T) {
 		store := mockStore{}
 		points, err := getInit(ctx, store, p1.Point())
@@ -177,19 +141,6 @@ func Test_getInit(t *testing.T) {
 		}
 
 		want := `{"args":{"points":[{"blockNo":123,"hash":"hash","slot":456}]},"methodname":"FindIntersect","mirror":{"step":"INIT"},"servicename":"ogmios","type":"jsonwsp/request","version":"1.0"}`
-		if got := string(points); got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
-	})
-
-	t.Run("from pointsV6", func(t *testing.T) {
-		store := mockStore{}
-		points, err := getInitV6(ctx, store, p1V6.Point())
-		if err != nil {
-			t.Fatalf("got %v; want nil", err)
-		}
-
-		want := `{"id":{"step":"INIT"},"jsonrpc":"2.0","method":"findIntersection","params":{"points":[{"blockNo":123,"id":"hash","slot":456}]}}`
 		if got := string(points); got != want {
 			t.Fatalf("got %v; want %v", got, want)
 		}
