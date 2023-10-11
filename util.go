@@ -14,16 +14,16 @@
 
 package ogmigo
 
-import (
-	"encoding/json"
-)
-
 // Map provides a simple type alias
 type Map map[string]interface{}
 
 type circular struct {
 	index int
 	data  [][]byte
+}
+
+type SubmitTxPayload struct {
+	CBOR string `json:"cbor"`
 }
 
 func newCircular(cap int) *circular {
@@ -59,11 +59,12 @@ func makePayload(methodName string, args Map) Map {
 	}
 }
 
-func makeSubmitTxPayload(methodName string, cborHexTx string, args json.RawMessage) Map {
+func makeSubmitTxPayload(cborHexTx string, args Map) Map {
+	tx := SubmitTxPayload{CBOR: cborHexTx}
 	return Map{
 		"jsonrpc": "2.0",
-		"method":  methodName,
-		"params":  Map{"transaction": cborHexTx},
+		"method":  "submitTransaction",
+		"params":  Map{"transaction": tx},
 		"id":      args,
 	}
 }
