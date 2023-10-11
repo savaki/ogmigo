@@ -53,27 +53,17 @@ func (c *circular) prefix(data ...[]byte) [][]byte {
 
 func makePayload(methodName string, args Map) Map {
 	return Map{
-		"type":        "jsonwsp/request",
-		"version":     "1.0",
-		"servicename": "ogmios",
-		"methodname":  methodName,
-		"args":        args,
+		"jsonrpc": "2.0",
+		"method":  methodName,
+		"id":      args,
 	}
 }
 
-func makeQueryPayloadV6(methodName string, args json.RawMessage) Map {
+func makeSubmitTxPayload(methodName string, cborHexTx string, args json.RawMessage) Map {
 	return Map{
-		"jsonrpc":    "2.0",
-		"methodname": methodName,
-		"id":         args,
-	}
-}
-
-func makeSubmitTxPayloadV6(methodName string, cborHexTx string, args json.RawMessage) Map {
-	return Map{
-		"jsonrpc":    "2.0",
-		"methodname": methodName,
-		"params":     Map{"transaction": cborHexTx},
-		"id":         args,
+		"jsonrpc": "2.0",
+		"method":  methodName,
+		"params":  Map{"transaction": cborHexTx},
+		"id":      args,
 	}
 }

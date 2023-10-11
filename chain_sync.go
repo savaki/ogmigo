@@ -209,7 +209,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 			return fmt.Errorf("failed to write FindIntersect: %w", err)
 		}
 
-		next := []byte(`{"type":"jsonwsp/request","version":"1.0","servicename":"ogmios","methodname":"RequestNext","args":{}}`)
+		next := []byte(`{"jsonrpc":"2.0","method":"nextBlock","id":{}}`)
 		for {
 			select {
 			case <-ctx.Done():

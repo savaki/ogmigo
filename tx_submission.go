@@ -49,7 +49,7 @@ func (c *Client) SubmitTx(ctx context.Context, data []byte) (err error) {
 	}
 
 	var (
-		payload = makePayload("SubmitTx", Map{"submit": signedTx})
+		payload = makePayload("submitTransaction", Map{"transaction": signedTx})
 		raw     json.RawMessage
 	)
 	if err := c.query(ctx, payload, &raw); err != nil {
@@ -112,35 +112,6 @@ func (s SubmitTxError) Error() string {
 }
 
 func readSubmitTx(data []byte) error {
-	value, dataType, _, err := jsonparser.Get(data, "result", "SubmitFail")
-	if err != nil {
-		if errors.Is(err, jsonparser.KeyPathNotFoundError) {
-			return nil
-		}
-		return fmt.Errorf("failed to parse SubmitTx response: %w", err)
-	}
-
-	switch dataType {
-	case jsonparser.Array:
-		var messages []json.RawMessage
-		if err := json.Unmarshal(value, &messages); err != nil {
-			return fmt.Errorf("failed to parse SubmitTx response: array: %w", err)
-		}
-		if len(messages) == 0 {
-			return nil
-		}
-		return SubmitTxError{messages: messages}
-
-	case jsonparser.Object:
-		return SubmitTxError{messages: []json.RawMessage{value}}
-
-	default:
-		return fmt.Errorf("SubmitTx failed: %v", string(value))
-	}
-}
-
-// TODO - Fine tune the error handling. Unsure precisely how to handle it.
-func readSubmitTxV6(data []byte) error {
 	value, dataType, _, err := jsonparser.Get(data, "error")
 	if err != nil {
 		if errors.Is(err, jsonparser.KeyPathNotFoundError) {

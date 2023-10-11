@@ -113,7 +113,7 @@ func TestClient_EraStart(t *testing.T) {
 		t.Fatalf("got %#v; want nil", err)
 	}
 
-	start := time.Now().Add(-eraStart.Time)
+	start := time.Now().Add(-time.Duration(eraStart.Time.Seconds.Uint64()))
 	fmt.Println(start)
 
 	encoder := json.NewEncoder(os.Stdout)

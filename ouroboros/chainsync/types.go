@@ -491,6 +491,15 @@ func (tt TxOuts) FindByAssetID(assetID AssetID) (TxOut, bool) {
 
 type Datums map[string]string
 
+type TxInQuery struct {
+	Transaction UtxoTxID `json:"transaction"  dynamodbav:"transaction"`
+	Index       uint32   `json:"index" dynamodbav:"index"`
+}
+
+type UtxoTxID struct {
+	ID string `json:"id"`
+}
+
 func (d *Datums) UnmarshalJSON(i []byte) error {
 	if i == nil {
 		return nil
