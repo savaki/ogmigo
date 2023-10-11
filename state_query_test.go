@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
 	"os"
 	"testing"
 	"time"
@@ -130,6 +131,30 @@ func TestClient_UtxosByAddress(t *testing.T) {
 	ctx := context.Background()
 	client := New(WithEndpoint(endpoint), WithLogger(DefaultLogger))
 	utxos, err := client.UtxosByAddress(ctx, "addr_test1qz6m03tdfm5raxr00fsw7p8v79ptfveaptar9a56zqz09kqkazwhq98h9v8gnk3wm5uvevzvd642zm7778afv0evwqgqfuy84f")
+	if err != nil {
+		t.Fatalf("got %#v; want nil", err)
+	}
+
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	encoder.Encode(utxos)
+}
+
+func TestClient_UtxosByTxIn(t *testing.T) {
+	endpoint := os.Getenv("OGMIOS")
+	if endpoint == "" {
+		t.SkipNow()
+	}
+
+	ctx := context.Background()
+	client := New(WithEndpoint(endpoint), WithLogger(DefaultLogger))
+	utxos, err := client.UtxosByTxIn(ctx, chainsync.TxInQuery{
+		Transaction: chainsync.UtxoTxID{
+			ID: "0000000000000000000000000000000000000000000000000000000000000000",
+		},
+		Index: 0,
+	})
+
 	if err != nil {
 		t.Fatalf("got %#v; want nil", err)
 	}
