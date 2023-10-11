@@ -55,7 +55,8 @@ func makePayload(methodName string, args Map) Map {
 	return Map{
 		"jsonrpc": "2.0",
 		"method":  methodName,
-		"id":      args,
+		"params":  args,
+		"id":      nil,
 	}
 }
 
