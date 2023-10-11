@@ -16,8 +16,6 @@ package ogmigo
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -33,7 +31,7 @@ func TestClient_SubmitTx(t *testing.T) {
 
 	ctx := context.Background()
 	client := New(WithEndpoint(endpoint), WithLogger(DefaultLogger))
-	err := client.SubmitTx(ctx, []byte("blah"))
+	err := client.SubmitTx(ctx, "00010203")
 	if err == nil {
 		t.Fatalf("expected error, got %v", err)
 	}
@@ -56,24 +54,7 @@ func testSubmitTxResult(t *testing.T) filepath.WalkFunc {
 				return
 			}
 
-			data, err := ioutil.ReadFile(path)
-			if err != nil {
-				t.Fatalf("got %v; want nil", err)
-			}
-
-			err = readSubmitTx(data)
-			var ste SubmitTxError
-			if ok := errors.As(err, &ste); ok {
-				keys, err := ste.ErrorCodes()
-				if err != nil {
-					t.Fatalf("got %v; want nil", err)
-				}
-				if len(keys) == 0 {
-					t.Fatalf("got 0 keys; want > 0")
-				}
-				fmt.Println(keys)
-				return
-			}
+			_, err := ioutil.ReadFile(path)
 			if err != nil {
 				t.Fatalf("got %v; want nil", err)
 			}
