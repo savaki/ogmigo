@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/big"
 
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/statequery"
@@ -26,7 +25,7 @@ import (
 
 func (c *Client) ChainTip(ctx context.Context) (chainsync.Point, error) {
 	var (
-		payload = makePayload("Query", Map{"query": "ledgerTip"})
+		payload = makePayload("queryLedgerState/tip", Map{})
 		content struct{ Result chainsync.Point }
 	)
 
@@ -39,7 +38,7 @@ func (c *Client) ChainTip(ctx context.Context) (chainsync.Point, error) {
 
 func (c *Client) CurrentEpoch(ctx context.Context) (uint64, error) {
 	var (
-		payload = makePayload("Query", Map{"query": "currentEpoch"})
+		payload = makePayload("queryLedgerState/epoch", Map{})
 		content struct{ Result uint64 }
 	)
 
@@ -52,7 +51,7 @@ func (c *Client) CurrentEpoch(ctx context.Context) (uint64, error) {
 
 func (c *Client) CurrentProtocolParameters(ctx context.Context) (json.RawMessage, error) {
 	var (
-		payload = makePayload("Query", Map{"query": "currentProtocolParameters"})
+		payload = makePayload("queryLedgerState/protocolParameters", Map{})
 		content struct{ Result json.RawMessage }
 	)
 
@@ -74,20 +73,20 @@ type EraSummary struct {
 }
 
 type EraBound struct {
-	Time  big.Int `json:"time"` // Picosecond precision, too big for uint64
-	Slot  uint64  `json:"slot"`
-	Epoch uint64  `json:"epoch"`
+	Time  statequery.EraSeconds `json:"time"` // Picosecond precision, too big for uint64
+	Slot  uint64                `json:"slot"`
+	Epoch uint64                `json:"epoch"`
 }
 
 type EraParameters struct {
-	EpochLength uint64 `json:"epochLength"`
-	SlotLength  uint64 `json:"slotLength"`
-	SafeZone    uint64 `json:"safeZone"`
+	EpochLength uint64                     `json:"epochLength"`
+	SlotLength  statequery.EraMilliseconds `json:"slotLength"`
+	SafeZone    uint64                     `json:"safeZone"`
 }
 
 func (c *Client) EraSummaries(ctx context.Context) (*EraHistory, error) {
 	var (
-		payload = makePayload("Query", Map{"query": "eraSummaries"})
+		payload = makePayload("queryLedgerState/eraSummaries", Map{})
 		content struct{ Result json.RawMessage }
 	)
 
@@ -107,7 +106,7 @@ func (c *Client) EraSummaries(ctx context.Context) (*EraHistory, error) {
 
 func (c *Client) EraStart(ctx context.Context) (statequery.EraStart, error) {
 	var (
-		payload = makePayload("Query", Map{"query": "eraStart"})
+		payload = makePayload("queryLedgerState/eraStart", Map{})
 		content struct{ Result statequery.EraStart }
 	)
 
@@ -120,7 +119,7 @@ func (c *Client) EraStart(ctx context.Context) (statequery.EraStart, error) {
 
 func (c *Client) UtxosByAddress(ctx context.Context, addresses ...string) ([]statequery.Utxo, error) {
 	var (
-		payload = makePayload("Query", Map{"query": Map{"utxo": addresses}})
+		payload = makePayload("queryLedgerState/utxo", Map{"addresses": addresses})
 		content struct{ Result []statequery.Utxo }
 	)
 
@@ -131,9 +130,9 @@ func (c *Client) UtxosByAddress(ctx context.Context, addresses ...string) ([]sta
 	return content.Result, nil
 }
 
-func (c *Client) UtxosByTxIn(ctx context.Context, txIns ...chainsync.TxIn) ([]statequery.Utxo, error) {
+func (c *Client) UtxosByTxIn(ctx context.Context, txIns ...chainsync.TxInQuery) ([]statequery.Utxo, error) {
 	var (
-		payload = makePayload("Query", Map{"query": Map{"utxo": txIns}})
+		payload = makePayload("queryLedgerState/utxo", Map{"outputReferences": txIns})
 		content struct{ Result []statequery.Utxo }
 	)
 

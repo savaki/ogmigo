@@ -209,7 +209,7 @@ func (c *Client) doChainSync(ctx context.Context, callback ChainSyncFunc, option
 			return fmt.Errorf("failed to write FindIntersect: %w", err)
 		}
 
-		next := []byte(`{"type":"jsonwsp/request","version":"1.0","servicename":"ogmios","methodname":"RequestNext","args":{}}`)
+		next := []byte(`{"jsonrpc":"2.0","method":"nextBlock","id":{}}`)
 		for {
 			select {
 			case <-ctx.Done():
@@ -327,29 +327,32 @@ func getInit(ctx context.Context, store Store, pp ...chainsync.Point) (data []by
 	}
 
 	init := Map{
-		"type":        "jsonwsp/request",
-		"version":     "1.0",
-		"servicename": "ogmios",
-		"methodname":  "FindIntersect",
-		"args":        Map{"points": points},
-		"mirror":      Map{"step": "INIT"},
+		"jsonrpc": "2.0",
+		"method":  "findIntersection",
+		"params":  Map{"points": points},
+		"id":      Map{"step": "INIT"},
 	}
 	return json.Marshal(init)
 }
 
 // getPoint returns the first point from the list of json encoded chainsync.Responses provided
 // multiple Responses allow for the possibility of a Rollback being included in the set
+// TODO - RollForward has a block. RollBackward has a point. How do we handle this?
 func getPoint(data ...[]byte) (chainsync.Point, bool) {
 	for _, d := range data {
 		if len(d) == 0 {
 			continue
 		}
 
-		var response chainsync.Response
+		var response chainsync.ResponsePraos
 		if err := json.Unmarshal(d, &response); err == nil {
-			if response.Result != nil && response.Result.RollForward != nil {
-				ps := response.Result.RollForward.Block.PointStruct()
-				return ps.Point(), true
+			if response.Result != nil {
+				if response.Result.Direction == "forward" {
+					ps := response.Result.Block.PointStruct()
+					return ps.Point(), true
+				} else if response.Result.Direction == "backward" {
+					return response.Result.Point, true
+				}
 			}
 		}
 	}

@@ -14,6 +14,10 @@
 
 package ogmigo
 
+import (
+	"encoding/json"
+)
+
 // Map provides a simple type alias
 type Map map[string]interface{}
 
@@ -49,10 +53,17 @@ func (c *circular) prefix(data ...[]byte) [][]byte {
 
 func makePayload(methodName string, args Map) Map {
 	return Map{
-		"type":        "jsonwsp/request",
-		"version":     "1.0",
-		"servicename": "ogmios",
-		"methodname":  methodName,
-		"args":        args,
+		"jsonrpc": "2.0",
+		"method":  methodName,
+		"id":      args,
+	}
+}
+
+func makeSubmitTxPayload(methodName string, cborHexTx string, args json.RawMessage) Map {
+	return Map{
+		"jsonrpc": "2.0",
+		"method":  methodName,
+		"params":  Map{"transaction": cborHexTx},
+		"id":      args,
 	}
 }

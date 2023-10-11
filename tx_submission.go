@@ -49,7 +49,7 @@ func (c *Client) SubmitTx(ctx context.Context, data []byte) (err error) {
 	}
 
 	var (
-		payload = makePayload("SubmitTx", Map{"submit": signedTx})
+		payload = makePayload("submitTransaction", Map{"transaction": signedTx})
 		raw     json.RawMessage
 	)
 	if err := c.query(ctx, payload, &raw); err != nil {
@@ -112,7 +112,7 @@ func (s SubmitTxError) Error() string {
 }
 
 func readSubmitTx(data []byte) error {
-	value, dataType, _, err := jsonparser.Get(data, "result", "SubmitFail")
+	value, dataType, _, err := jsonparser.Get(data, "error")
 	if err != nil {
 		if errors.Is(err, jsonparser.KeyPathNotFoundError) {
 			return nil
