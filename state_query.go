@@ -62,6 +62,19 @@ func (c *Client) CurrentProtocolParameters(ctx context.Context) (json.RawMessage
 	return content.Result, nil
 }
 
+func (c *Client) GenesisConfig(ctx context.Context, era string) (json.RawMessage, error) {
+       var (
+               payload = makePayload("queryNetwork/genesisConfiguration", Map{"era": era})
+               content struct{ Result json.RawMessage }
+       )
+
+       if err := c.query(ctx, payload, &content); err != nil {
+               return nil, err
+       }
+
+       return content.Result, nil
+}
+
 type EraHistory struct {
 	Summaries []EraSummary
 }

@@ -101,6 +101,24 @@ func TestClient_CurrentProtocolParameters(t *testing.T) {
 	_ = encoder.Encode(params)
 }
 
+func TestClient_GenesisConfig(t *testing.T) {
+       endpoint := os.Getenv("OGMIOS")
+       if endpoint == "" {
+               t.SkipNow()
+       }
+
+       ctx := context.Background()
+       client := New(WithEndpoint(endpoint), WithLogger(DefaultLogger))
+       params, err := client.GenesisConfig(ctx, "shelley")
+       if err != nil {
+               t.Fatalf("got %#v; want nil", err)
+       }
+
+       encoder := json.NewEncoder(os.Stdout)
+       encoder.SetIndent("", "  ")
+       _ = encoder.Encode(params)
+}
+
 func TestClient_EraStart(t *testing.T) {
 	endpoint := os.Getenv("OGMIOS")
 	if endpoint == "" {
