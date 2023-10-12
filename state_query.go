@@ -73,7 +73,7 @@ type EraSummary struct {
 }
 
 type EraBound struct {
-	Time  statequery.EraSeconds `json:"time"` // Picosecond precision, too big for uint64
+	Time  statequery.EraSeconds `json:"time"`
 	Slot  uint64                `json:"slot"`
 	Epoch uint64                `json:"epoch"`
 }
