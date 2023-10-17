@@ -163,6 +163,11 @@ type PointStruct struct {
 	Slot    uint64 `json:"slot,omitempty"    dynamodbav:"slot,omitempty"`
 }
 
+type PointStructV5 struct {
+	Hash string `json:"hash,omitempty"    dynamodbav:"hash,omitempty"` // BLAKE2b_256 hash
+	Slot uint64 `json:"slot,omitempty"    dynamodbav:"slot,omitempty"`
+}
+
 func (p PointStruct) Point() Point {
 	return Point{
 		pointType:   PointTypeStruct,
@@ -191,6 +196,23 @@ func (p Point) String() string {
 }
 
 type Points []Point
+
+type PointV5 struct {
+	pointType   PointType
+	pointString PointString
+	pointStruct *PointStructV5
+}
+
+func (p PointV5) String() string {
+	switch p.pointType {
+	case PointTypeString:
+		return string(p.pointString)
+	case PointTypeStruct:
+		return fmt.Sprintf("slot=%v hash=%v block=%v", p.pointStruct.Slot, p.pointStruct.Hash)
+	default:
+		return "invalid point"
+	}
+}
 
 func (pp Points) String() string {
 	var ss []string
@@ -348,9 +370,9 @@ type ProtocolVersion struct {
 }
 
 type RollBackward struct {
-	Direction string `json:"direction,omitempty" dynamodbav:"direction,omitempty"`
-	Tip       Tip    `json:"tip,omitempty"   dynamodbav:"tip,omitempty"`
-	Point     Point  `json:"point,omitempty" dynamodbav:"point,omitempty"`
+	Direction string            `json:"direction,omitempty" dynamodbav:"direction,omitempty"`
+	Tip       Tip               `json:"tip,omitempty"   dynamodbav:"tip,omitempty"`
+	Point     RollBackwardPoint `json:"point,omitempty" dynamodbav:"point,omitempty"`
 }
 
 type RollBackwardPoint struct {
@@ -373,12 +395,80 @@ func (r Block) PointStruct() PointStruct {
 	}
 }
 
+// Covers everything except Byron-era blocks.
+type ResultFindIntersectionPraos struct {
+	Intersection *Point                       `json:"intersection,omitempty" dynamodbav:"intersection,omitempty"`
+	Tip          *Tip                         `json:"tip,omitempty"          dynamodbav:"tip,omitempty"`
+	Error        *ResultFindIntersectionError `json:"error,omitempty"        dynamodbav:"error,omitempty"`
+	ID           json.RawMessage              `json:"id,omitempty"           dynamodbav:"id,omitempty"`
+}
+
+type ResultFindIntersectionV5 struct {
+	IntersectionFound    *IntersectionFoundV5    `json:",omitempty" dynamodbav:",omitempty"`
+	IntersectionNotFound *IntersectionNotFoundV5 `json:",omitempty" dynamodbav:",omitempty"`
+}
+
+type IntersectionFoundV5 struct {
+	Point *Point
+	Tip   *TipV5
+}
+
+type IntersectionNotFoundV5 struct {
+	Tip *TipV5
+}
+
+type ResultFindIntersectionError struct {
+	Code    uint32          `json:"code,omitempty"    dynamodbav:"code,omitempty"`
+	Message string          `json:"message,omitempty" dynamodbav:"message,omitempty"`
+	Data    *Tip            `json:"data,omitempty"    dynamodbav:"data,omitempty"` // Forward
+	ID      json.RawMessage `json:"id,omitempty"      dynamodbav:"id,omitempty"`
+}
+
+// Support findIntersect (v6) / FindIntersection (v5) universally.
+type CompatibleResultFindIntersection ResultFindIntersectionPraos
+
+func (c *CompatibleResultFindIntersection) UnmarshalJSON(data []byte) error {
+	// Assume v6 responses first, then fall back to manual v5 processing.
+	var r ResultFindIntersectionPraos
+	err := json.Unmarshal(data, &r)
+	if err == nil && r.Tip != nil {
+		*c = CompatibleResultFindIntersection(r)
+		return nil
+	}
+
+	var r5 ResultFindIntersectionV5
+	err = json.Unmarshal(data, &r5)
+	if err != nil {
+		return err
+	} else if r5.IntersectionFound != nil {
+		tip := Tip{Height: r5.IntersectionFound.Tip.BlockNo, ID: r5.IntersectionFound.Tip.Hash, Slot: 0}
+		c.Intersection = r5.IntersectionFound.Point
+		c.Tip = &tip
+		c.Error = nil
+		c.ID = nil
+		return nil
+	} else if r5.IntersectionNotFound != nil {
+		// Emulate the v6 IntersectionNotFound error as best as possible.
+		tip := Tip{Height: r5.IntersectionFound.Tip.BlockNo, ID: r5.IntersectionFound.Tip.Hash, Slot: 0}
+		err := ResultFindIntersectionError{Code: 1000, Message: "Intersection not found", Data: &tip}
+		c.Error = &err
+		return nil
+	}
+
+	// TODO: Further error handling here.
+	return nil
+}
+
+func (c CompatibleResultFindIntersection) String() string {
+	return fmt.Sprintf("intersection=[%v] tip=[%v] error=[%v] id=[%v]", c.Intersection, c.Tip, c.Error, c.ID)
+}
+
 // Covers all blocks except Byron-era blocks.
-type ResultPraos struct {
-	Direction string `json:"direction,omitempty" dynamodbav:"direction,omitempty"`
+type ResultNextBlockPraos struct {
+	Direction string `json:"intersection,omitempty" dynamodbav:"intersection,omitempty"`
 	Tip       *Tip   `json:"tip,omitempty"       dynamodbav:"tip,omitempty"`
 	Block     *Block `json:"block,omitempty"     dynamodbav:"block,omitempty"` // Forward
-	Point     Point  `json:"point,omitempty"     dynamodbav:"point,omitempty"` // Backward
+	Point     *Point `json:"point,omitempty"     dynamodbav:"point,omitempty"` // Backward
 }
 
 type Tip struct {
@@ -387,11 +477,66 @@ type Tip struct {
 	Height uint64 `json:"height,omitempty" dynamodbav:"height,omitempty"`
 }
 
-type ResponsePraos struct {
-	JsonRpc string          `json:"jsonrpc,omitempty" dynamodbav:"jsonrpc,omitempty"`
-	Method  string          `json:"method,omitempty"  dynamodbav:"method,omitempty"`
-	Result  *ResultPraos    `json:"result,omitempty"  dynamodbav:"result,omitempty"`
-	ID      json.RawMessage `json:"id,omitempty"      dynamodbav:"id,omitempty"`
+func (t Tip) String() string {
+	return fmt.Sprintf("slot=%v id=%v height=%v", t.Slot, t.ID, t.Height)
+}
+
+type TipV5 struct {
+	Slot    uint64 `json:"slot,omitempty"    dynamodbav:"slot,omitempty"`
+	Hash    string `json:"hash,omitempty"    dynamodbav:"hash,omitempty"`
+	BlockNo uint64 `json:"blockNo,omitempty" dynamodbav:"blockNo,omitempty"`
+}
+
+type ResponseFindIntersectionPraos struct {
+	JsonRpc string                            `json:"jsonrpc,omitempty" dynamodbav:"jsonrpc,omitempty"`
+	Method  string                            `json:"method,omitempty"  dynamodbav:"method,omitempty"`
+	Result  *CompatibleResultFindIntersection `json:"result,omitempty"  dynamodbav:"result,omitempty"`
+	ID      json.RawMessage                   `json:"id,omitempty"      dynamodbav:"id,omitempty"`
+}
+
+// Support findIntersect (v6) / FindIntersection (v5) universally.
+type CompatibleResponseFindIntersection ResponseFindIntersectionPraos
+
+func (c *CompatibleResponseFindIntersection) UnmarshalJSON(data []byte) error {
+	var r ResponseFindIntersectionPraos
+	err := json.Unmarshal(data, &r)
+	if err == nil && r.Result != nil {
+		c.Result = r.Result
+		return nil
+	}
+
+	var r5 ResponseFindIntersectionV5
+	err = json.Unmarshal(data, &r5)
+	c.JsonRpc = "2.0"
+	c.Method = "findIntersection"
+	if err != nil {
+		// Just skip all the data processing, as it's useless.
+		return nil
+	} else {
+		// All we really care about is the result.
+		c.Result = r5.Result
+		c.ID = r5.Reflection
+		return nil
+	}
+
+	// TODO: Further error handling here.
+	return nil
+}
+
+type ResponseFindIntersectionV5 struct {
+	Type        string                            `json:"type,omitempty"        dynamodbav:"type,omitempty"`
+	Version     string                            `json:"version,omitempty"     dynamodbav:"version,omitempty"`
+	ServiceName string                            `json:"servicename,omitempty" dynamodbav:"servicename,omitempty"`
+	MethodName  string                            `json:"methodname,omitempty"  dynamodbav:"methodname,omitempty"`
+	Result      *CompatibleResultFindIntersection `json:"result,omitempty"      dynamodbav:"result,omitempty"`
+	Reflection  json.RawMessage                   `json:"reflection,omitempty"  dynamodbav:"reflection,omitempty"`
+}
+
+type ResponseNextBlockPraos struct {
+	JsonRpc string                `json:"jsonrpc,omitempty" dynamodbav:"jsonrpc,omitempty"`
+	Method  string                `json:"method,omitempty"  dynamodbav:"method,omitempty"`
+	Result  *ResultNextBlockPraos `json:"result,omitempty"  dynamodbav:"result,omitempty"`
+	ID      json.RawMessage       `json:"id,omitempty"      dynamodbav:"id,omitempty"`
 }
 
 type Tx struct {

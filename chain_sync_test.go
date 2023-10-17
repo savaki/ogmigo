@@ -48,7 +48,7 @@ func TestClient_ChainSync(t *testing.T) {
 
 	client := New(WithEndpoint(endpoint))
 	var callback ChainSyncFunc = func(ctx context.Context, data []byte) error {
-		var response chainsync.ResponsePraos
+		var response chainsync.ResponseNextBlockPraos
 		decoder := json.NewDecoder(bytes.NewReader(data)) // use decoder to check for unknown fields
 		decoder.DisallowUnknownFields()
 

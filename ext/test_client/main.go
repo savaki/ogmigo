@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/SundaeSwap-finance/ogmigo/v6"
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
@@ -12,12 +13,25 @@ import (
 
 func main() {
 	var callback ogmigo.ChainSyncFunc = func(ctx context.Context, data []byte) error {
-		dst := &bytes.Buffer{}
-		if err := json.Indent(dst, data, "", "  "); err != nil {
-			fmt.Println("Failed Marshal: %v", err)
+		// Quick-and-dirty way to distinguish b/w 2 different responses.
+		jsonString := string(data)
+		if strings.Contains(jsonString, "findIntersection") || strings.Contains(jsonString, "FindIntersect") {
+			var response chainsync.CompatibleResponseFindIntersection
+			if err := json.Unmarshal(data, &response); err != nil {
+				fmt.Println("Failed Unmarshal: %v", err)
+				return nil
+			}
+
+			fmt.Println("FindIntersection result: ", response)
+			var result chainsync.CompatibleResultFindIntersection
+			result = *response.Result
+			fmt.Println("CompatibleResultFindIntersection result: ", result)
+		} else if strings.Contains(jsonString, "nextBlock") || strings.Contains(jsonString, "RequestNext") {
+			// TODO - Print next block
+		} else {
+			fmt.Println("Unknown response: ", jsonString)
 		}
 
-		// Do whatever here.
 		return nil
 	}
 
@@ -71,7 +85,9 @@ func main() {
 	}
 	println("GOT THE ERA START - ", start.Slot.Uint64())
 
-	utxos_addr, err := my_client.UtxosByAddress(ctx, "addr1q92hfcy7rwmegfwmul2zvlnru3wpnwleu30ujvcpx2hh84mvk4uyun72qraqj8e7hpfluuzxa7zhmcmxcyhqu8yuu6aqr4cpl3", "addr1vyjdya9lmyfmysdgej3qc6thwat33lwm3umk8uwnvhy9g3gzvd2jp")
+	// Caveat emptor. Due to internal changes, UTXO queries are supported on a
+	// best-effort basis, and are very slow even when they do work.
+	utxos_addr, err := my_client.UtxosByAddress(ctx, "addr1v8ua3ne8pp050eyfyhavazzlkdh2e38urw38jlnl55nkwccuzg2m5", "addr1qyaj05kuw0c4amuqgyxr6arpgjnns65fcc4af6kqwt3wznfmylfdcul3tmhcqsgv846xz3988p4gn33t6n4vquhzu9xswpk9uz")
 	if err != nil {
 		fmt.Println("Failed UtxosByAddress: %v", err)
 		return
@@ -93,7 +109,7 @@ func main() {
 	if err != nil {
 		fmt.Println("Failed SubmitTx: ", err)
 	} else {
-		fmt.Println("Successful TX submission")
+		fmt.Println("Successful TX submission - ", signed_tx_cbor)
 	}
 
 	if err := closer.Close(); err != nil {

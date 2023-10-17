@@ -344,14 +344,14 @@ func getPoint(data ...[]byte) (chainsync.Point, bool) {
 			continue
 		}
 
-		var response chainsync.ResponsePraos
+		var response chainsync.ResponseNextBlockPraos
 		if err := json.Unmarshal(d, &response); err == nil {
 			if response.Result != nil {
 				if response.Result.Direction == "forward" {
 					ps := response.Result.Block.PointStruct()
 					return ps.Point(), true
 				} else if response.Result.Direction == "backward" {
-					return response.Result.Point, true
+					return *response.Result.Point, true
 				}
 			}
 		}

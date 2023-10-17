@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/SundaeSwap-finance/ogmigo"
+	"github.com/SundaeSwap-finance/ogmigo/v6"
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
 	"github.com/urfave/cli/v2"
 )
@@ -88,7 +88,7 @@ func action(_ *cli.Context) error {
 		}
 		slot, _ := strconv.ParseUint(match[1], 10, 64)
 		points = append(points, chainsync.PointStruct{
-			Hash: match[2],
+			ID:   match[2],
 			Slot: slot,
 		}.Point())
 	}
@@ -99,19 +99,19 @@ func action(_ *cli.Context) error {
 			return nil
 		}
 
-		var response chainsync.Response
+		var response chainsync.ResponseFindIntersectionPraos
 		if err := json.Unmarshal(data, &response); err != nil {
 			return err
 		}
 		if response.Result == nil {
 			return nil
 		}
-		if response.Result.RollForward == nil {
+		if response.Result.Intersection == nil {
 			return nil
 		}
 
-		ps := response.Result.RollForward.Block.PointStruct()
-		fmt.Printf("slot=%v hash=%v block=%v\n", ps.Slot, ps.Hash, ps.BlockNo)
+		ps, _ := response.Result.Intersection.PointStruct()
+		fmt.Printf("slot=%v id=%v block=%v\n", ps.Slot, ps.ID, ps.BlockNo)
 
 		return nil
 	}
