@@ -57,7 +57,7 @@ func assertStructMatchesSchema(t *testing.T) filepath.WalkFunc {
 
 		decoder := json.NewDecoder(f)
 		decoder.DisallowUnknownFields()
-		err = decoder.Decode(&ResponseNextBlockPraos{})
+		err = decoder.Decode(&ResponsePraos{})
 		if err != nil {
 			t.Fatalf("got %v; want nil: %v", err, fmt.Sprintf("struct did not match schema for file, %v", path))
 		}
@@ -88,7 +88,7 @@ func assertDynamoDBSerialize(t *testing.T) filepath.WalkFunc {
 		}
 		defer f.Close()
 
-		var want ResponseNextBlockPraos
+		var want ResponsePraos
 		decoder := json.NewDecoder(f)
 		decoder.DisallowUnknownFields()
 		err = decoder.Decode(&want)
@@ -101,7 +101,7 @@ func assertDynamoDBSerialize(t *testing.T) filepath.WalkFunc {
 			t.Fatalf("got %v; want nil", err)
 		}
 
-		var got ResponseNextBlockPraos
+		var got ResponsePraos
 		err = dynamodbattribute.Unmarshal(item, &got)
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
@@ -570,7 +570,7 @@ func TestPraosResponse(t *testing.T) {
 		"id": "H07GyFhAxTb4"
 	}
 `
-	var response ResponseNextBlockPraos
+	var response ResponsePraos
 	err := json.Unmarshal([]byte(data), &response)
 	if err != nil {
 		t.Fatalf("error unmarshalling response: %v", err)

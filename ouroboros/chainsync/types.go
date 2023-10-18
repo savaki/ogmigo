@@ -89,6 +89,15 @@ func (a AssetID) PolicyID() string {
 	return s // Assets with empty-string name come back as just the policy ID
 }
 
+type IntersectionFound struct {
+	Point PointV5
+	Tip   TipV5
+}
+
+type IntersectionNotFound struct {
+	Tip TipV5
+}
+
 // All blocks except Byron-era blocks.
 type Block struct {
 	Type         string      `json:"type,omitempty"`
@@ -395,12 +404,19 @@ func (r Block) PointStruct() PointStruct {
 	}
 }
 
+type ResultV5 struct {
+	IntersectionFound    *IntersectionFound    `json:",omitempty" dynamodbav:",omitempty"`
+	IntersectionNotFound *IntersectionNotFound `json:",omitempty" dynamodbav:",omitempty"`
+	// RollForward          *RollForwardV5          `json:",omitempty" dynamodbav:",omitempty"`
+	// RollBackward         *RollBackwardV5         `json:",omitempty" dynamodbav:",omitempty"`
+}
+
 // Covers everything except Byron-era blocks.
 type ResultFindIntersectionPraos struct {
-	Intersection *Point                       `json:"intersection,omitempty" dynamodbav:"intersection,omitempty"`
-	Tip          *Tip                         `json:"tip,omitempty"          dynamodbav:"tip,omitempty"`
-	Error        *ResultFindIntersectionError `json:"error,omitempty"        dynamodbav:"error,omitempty"`
-	ID           json.RawMessage              `json:"id,omitempty"           dynamodbav:"id,omitempty"`
+	Intersection *Point          `json:"intersection,omitempty" dynamodbav:"intersection,omitempty"`
+	Tip          *Tip            `json:"tip,omitempty"          dynamodbav:"tip,omitempty"`
+	Error        *ResultError    `json:"error,omitempty"        dynamodbav:"error,omitempty"`
+	ID           json.RawMessage `json:"id,omitempty"           dynamodbav:"id,omitempty"`
 }
 
 type ResultFindIntersectionV5 struct {
@@ -417,7 +433,7 @@ type IntersectionNotFoundV5 struct {
 	Tip *TipV5
 }
 
-type ResultFindIntersectionError struct {
+type ResultError struct {
 	Code    uint32          `json:"code,omitempty"    dynamodbav:"code,omitempty"`
 	Message string          `json:"message,omitempty" dynamodbav:"message,omitempty"`
 	Data    *Tip            `json:"data,omitempty"    dynamodbav:"data,omitempty"` // Forward
@@ -450,7 +466,7 @@ func (c *CompatibleResultFindIntersection) UnmarshalJSON(data []byte) error {
 	} else if r5.IntersectionNotFound != nil {
 		// Emulate the v6 IntersectionNotFound error as best as possible.
 		tip := Tip{Height: r5.IntersectionFound.Tip.BlockNo, ID: r5.IntersectionFound.Tip.Hash, Slot: 0}
-		err := ResultFindIntersectionError{Code: 1000, Message: "Intersection not found", Data: &tip}
+		err := ResultError{Code: 1000, Message: "Intersection not found", Data: &tip}
 		c.Error = &err
 		return nil
 	}
@@ -487,25 +503,18 @@ type TipV5 struct {
 	BlockNo uint64 `json:"blockNo,omitempty" dynamodbav:"blockNo,omitempty"`
 }
 
-type ResponseFindIntersectionPraos struct {
-	JsonRpc string                            `json:"jsonrpc,omitempty" dynamodbav:"jsonrpc,omitempty"`
-	Method  string                            `json:"method,omitempty"  dynamodbav:"method,omitempty"`
-	Result  *CompatibleResultFindIntersection `json:"result,omitempty"  dynamodbav:"result,omitempty"`
-	ID      json.RawMessage                   `json:"id,omitempty"      dynamodbav:"id,omitempty"`
-}
-
 // Support findIntersect (v6) / FindIntersection (v5) universally.
-type CompatibleResponseFindIntersection ResponseFindIntersectionPraos
+type CompatibleResponsePraos ResponsePraos
 
-func (c *CompatibleResponseFindIntersection) UnmarshalJSON(data []byte) error {
-	var r ResponseFindIntersectionPraos
+func (c *CompatibleResponsePraos) UnmarshalJSON(data []byte) error {
+	var r ResponsePraos
 	err := json.Unmarshal(data, &r)
 	if err == nil && r.Result != nil {
-		c.Result = r.Result
+		*c = CompatibleResponsePraos(r)
 		return nil
 	}
 
-	var r5 ResponseFindIntersectionV5
+	var r5 ResponseV5
 	err = json.Unmarshal(data, &r5)
 	c.JsonRpc = "2.0"
 	c.Method = "findIntersection"
@@ -514,7 +523,32 @@ func (c *CompatibleResponseFindIntersection) UnmarshalJSON(data []byte) error {
 		return nil
 	} else {
 		// All we really care about is the result.
-		c.Result = r5.Result
+		if r5.Result.IntersectionFound != nil {
+			var p Point
+			p.pointType = PointTypeStruct
+			p.pointStruct.Slot = r5.Result.IntersectionFound.Point.pointStruct.Slot
+			p.pointStruct.ID = r5.Result.IntersectionFound.Point.pointStruct.Hash
+			var t Tip
+			t.Slot = r5.Result.IntersectionFound.Tip.Slot
+			t.ID = r5.Result.IntersectionFound.Tip.Hash
+			t.Height = r5.Result.IntersectionFound.Tip.BlockNo
+
+			var findIntersection ResultFindIntersectionPraos
+			findIntersection.Intersection = &p
+			findIntersection.Tip = &t
+			c.Result = &findIntersection
+		} else if r5.Result.IntersectionNotFound != nil {
+			var t Tip
+			t.Slot = r5.Result.IntersectionNotFound.Tip.Slot
+			t.ID = r5.Result.IntersectionNotFound.Tip.Hash
+			t.Height = r5.Result.IntersectionFound.Tip.BlockNo
+
+			var e ResultError
+			e.Data = &t
+			e.Code = 1000
+			e.Message = "Intersection not found - Conversion from a v5 Ogmigo call"
+			c.Error = &e
+		}
 		c.ID = r5.Reflection
 		return nil
 	}
@@ -523,20 +557,76 @@ func (c *CompatibleResponseFindIntersection) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type ResponseFindIntersectionV5 struct {
-	Type        string                            `json:"type,omitempty"        dynamodbav:"type,omitempty"`
-	Version     string                            `json:"version,omitempty"     dynamodbav:"version,omitempty"`
-	ServiceName string                            `json:"servicename,omitempty" dynamodbav:"servicename,omitempty"`
-	MethodName  string                            `json:"methodname,omitempty"  dynamodbav:"methodname,omitempty"`
-	Result      *CompatibleResultFindIntersection `json:"result,omitempty"      dynamodbav:"result,omitempty"`
-	Reflection  json.RawMessage                   `json:"reflection,omitempty"  dynamodbav:"reflection,omitempty"`
+type ResponseV5 struct {
+	Type        string          `json:"type,omitempty"        dynamodbav:"type,omitempty"`
+	Version     string          `json:"version,omitempty"     dynamodbav:"version,omitempty"`
+	ServiceName string          `json:"servicename,omitempty" dynamodbav:"servicename,omitempty"`
+	MethodName  string          `json:"methodname,omitempty"  dynamodbav:"methodname,omitempty"`
+	Result      *ResultV5       `json:"result,omitempty"      dynamodbav:"result,omitempty"`
+	Reflection  json.RawMessage `json:"reflection,omitempty"  dynamodbav:"reflection,omitempty"`
 }
 
-type ResponseNextBlockPraos struct {
-	JsonRpc string                `json:"jsonrpc,omitempty" dynamodbav:"jsonrpc,omitempty"`
-	Method  string                `json:"method,omitempty"  dynamodbav:"method,omitempty"`
-	Result  *ResultNextBlockPraos `json:"result,omitempty"  dynamodbav:"result,omitempty"`
-	ID      json.RawMessage       `json:"id,omitempty"      dynamodbav:"id,omitempty"`
+type ResponsePraos struct {
+	JsonRpc string          `json:"jsonrpc,omitempty" dynamodbav:"jsonrpc,omitempty"`
+	Method  string          `json:"method,omitempty"  dynamodbav:"method,omitempty"`
+	Result  interface{}     `json:"result,omitempty"  dynamodbav:"result,omitempty"`
+	Error   *ResultError    `json:"error,omitempty"        dynamodbav:"error,omitempty"`
+	ID      json.RawMessage `json:"id,omitempty"      dynamodbav:"id,omitempty"`
+}
+
+const FindIntersectionMethod = "findIntersection"
+const NextBlockMethod = "nextBlock"
+
+func (r *ResponsePraos) UnmarshalJSON(b []byte) error {
+	var m map[string]interface{}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return err
+	}
+	r.JsonRpc = m["jsonrpc"].(string)
+	r.Method = m["method"].(string)
+	// TODO - Fix a crash. (panic: interface conversion: interface {} is map[string]interface {}, not json.RawMessage)
+	// r.ID = m["id"].(json.RawMessage)
+
+	switch m["method"] {
+	case FindIntersectionMethod:
+		var findIntersection CompatibleResultFindIntersection
+		if err := json.Unmarshal(b, &findIntersection); err != nil {
+			return err
+		}
+		// TODO - Fix a crash. (panic: interface conversion: interface {} is map[string]interface {}, not json.RawMessage)
+		// var result = []byte(m["result"].(json.RawMessage))
+		// if err := json.Unmarshal(result, &findIntersection); err != nil {
+		// 	return err
+		// }
+		fmt.Println("findIntersection: ", findIntersection)
+		r.Result = findIntersection
+
+	case NextBlockMethod:
+		var nextBlock ResultNextBlockPraos
+		if err := json.Unmarshal([]byte(m["result"].(json.RawMessage)), &nextBlock); err != nil {
+			return err
+		}
+		r.Result = nextBlock
+
+	default:
+		return fmt.Errorf("unknown method: %v", r.Method)
+	}
+
+	return nil
+}
+
+func (r ResponsePraos) MustFindIntersectResult() ResultFindIntersectionPraos {
+	if r.Method != FindIntersectionMethod {
+		panic("Must only use *Must* methods after switching on the findIntersection method")
+	}
+	return r.Result.(ResultFindIntersectionPraos)
+}
+
+func (r ResponsePraos) MustNextBlockResult() ResultNextBlockPraos {
+	if r.Method != NextBlockMethod {
+		panic("Must only use *Must* methods after switching on the nextBlock method")
+	}
+	return r.Result.(ResultNextBlockPraos)
 }
 
 type Tx struct {

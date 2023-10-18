@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/SundaeSwap-finance/ogmigo/v6"
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
@@ -13,23 +12,25 @@ import (
 
 func main() {
 	var callback ogmigo.ChainSyncFunc = func(ctx context.Context, data []byte) error {
-		// Quick-and-dirty way to distinguish b/w 2 different responses.
-		jsonString := string(data)
-		if strings.Contains(jsonString, "findIntersection") || strings.Contains(jsonString, "FindIntersect") {
-			var response chainsync.CompatibleResponseFindIntersection
-			if err := json.Unmarshal(data, &response); err != nil {
-				fmt.Println("Failed Unmarshal: %v", err)
-				return nil
-			}
 
-			fmt.Println("FindIntersection result: ", response)
+		// Quick-and-dirty way to distinguish b/w 2 different responses.
+		var response chainsync.CompatibleResponsePraos
+		if err := json.Unmarshal(data, &response); err != nil {
+			fmt.Println("Failed Unmarshal: %v", err)
+			return nil
+		}
+
+		switch response.Method {
+		case chainsync.FindIntersectionMethod:
+			fmt.Println("FindIntersection")
 			var result chainsync.CompatibleResultFindIntersection
-			result = *response.Result
+			result = response.Result.(chainsync.CompatibleResultFindIntersection)
 			fmt.Println("CompatibleResultFindIntersection result: ", result)
-		} else if strings.Contains(jsonString, "nextBlock") || strings.Contains(jsonString, "RequestNext") {
-			// TODO - Print next block
-		} else {
-			fmt.Println("Unknown response: ", jsonString)
+		case chainsync.NextBlockMethod:
+			// TODO - Add support.
+			fmt.Println("Unsupported method (for now): ", response.Method)
+		default:
+			fmt.Println("Unsupported method: ", response.Method)
 		}
 
 		return nil
