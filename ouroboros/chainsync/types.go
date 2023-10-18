@@ -578,16 +578,23 @@ const FindIntersectionMethod = "findIntersection"
 const NextBlockMethod = "nextBlock"
 
 func (r *ResponsePraos) UnmarshalJSON(b []byte) error {
-	var m map[string]interface{}
+	var m struct {
+		JsonRpc string          `json:"jsonrpc"`
+		Method  string          `json:"method"`
+		ID      json.RawMessage `json:"ID"`
+		Result  json.RawMessage `json:"result"`
+		Error   json.RawMessage `json:"error"`
+	}
 	if err := json.Unmarshal(b, &m); err != nil {
 		return err
 	}
-	r.JsonRpc = m["jsonrpc"].(string)
-	r.Method = m["method"].(string)
-	// TODO - Fix a crash. (panic: interface conversion: interface {} is map[string]interface {}, not json.RawMessage)
-	// r.ID = m["id"].(json.RawMessage)
+	r.JsonRpc = m.JsonRpc
+	r.Method = m.Method
+	r.ID = m.ID
+	// TODO: parse if not nill
+	// r.Error = m.Error
 
-	switch m["method"] {
+	switch m.Method {
 	case FindIntersectionMethod:
 		var findIntersection CompatibleResultFindIntersection
 		if err := json.Unmarshal(b, &findIntersection); err != nil {
@@ -603,13 +610,12 @@ func (r *ResponsePraos) UnmarshalJSON(b []byte) error {
 
 	case NextBlockMethod:
 		var nextBlock ResultNextBlockPraos
-		if err := json.Unmarshal([]byte(m["result"].(json.RawMessage)), &nextBlock); err != nil {
+		if err := json.Unmarshal(m.Result, &nextBlock); err != nil {
 			return err
 		}
 		r.Result = nextBlock
-
 	default:
-		return fmt.Errorf("unknown method: %v", r.Method)
+		return fmt.Errorf("unknown method: '%v'", r.Method)
 	}
 
 	return nil
@@ -617,14 +623,14 @@ func (r *ResponsePraos) UnmarshalJSON(b []byte) error {
 
 func (r ResponsePraos) MustFindIntersectResult() ResultFindIntersectionPraos {
 	if r.Method != FindIntersectionMethod {
-		panic("Must only use *Must* methods after switching on the findIntersection method")
+		panic(fmt.Errorf("must only use *Must* methods after switching on the findIntersection method; called on %v", r.Method))
 	}
 	return r.Result.(ResultFindIntersectionPraos)
 }
 
 func (r ResponsePraos) MustNextBlockResult() ResultNextBlockPraos {
 	if r.Method != NextBlockMethod {
-		panic("Must only use *Must* methods after switching on the nextBlock method")
+		panic(fmt.Errorf("must only use *Must* methods after switching on the nextBlock method; called on %v", r.Method))
 	}
 	return r.Result.(ResultNextBlockPraos)
 }
