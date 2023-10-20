@@ -1,4 +1,4 @@
-ext/test_client/test_client
+cmd/test_client/test_client
 
 # ignore intellij
 .idea
