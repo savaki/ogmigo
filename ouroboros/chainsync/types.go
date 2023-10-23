@@ -268,7 +268,7 @@ func (p PointV5) String() string {
 	case PointTypeString:
 		return string(p.pointString)
 	case PointTypeStruct:
-		return fmt.Sprintf("slot=%v hash=%v block=%v", p.pointStruct.Slot, p.pointStruct.Hash)
+		return fmt.Sprintf("slot=%v hash=%v", p.pointStruct.Slot, p.pointStruct.Hash)
 	default:
 		return "invalid point"
 	}
@@ -722,11 +722,24 @@ func (c *CompatibleResultNextBlock) UnmarshalJSON(data []byte) error {
 		}
 		protocol := Protocol{Version: protocolVersion}
 		leaderValue := LeaderValue{Proof: "fake", Output: "fake"}
-		vk, _ := base64.StdEncoding.DecodeString(r5.RollForward.Block.Header.OpCert["hotVk"].(string))
-		opCert := OpCert{
-			Count: r5.RollForward.Block.Header.OpCert["count"].(uint64),
-			Kes:   Kes{Period: r5.RollForward.Block.Header.OpCert["kesPeriod"].(uint64), VerificationKey: string(vk)},
+
+		var vk []byte
+		if r5.RollForward.Block.Header.OpCert["hotVk"] != nil {
+			vk, _ = base64.StdEncoding.DecodeString(r5.RollForward.Block.Header.OpCert["hotVk"].(string))
 		}
+		var count uint64
+		if r5.RollForward.Block.Header.OpCert["count"] != nil {
+			count = r5.RollForward.Block.Header.OpCert["count"].(uint64)
+		}
+		var period uint64
+		if r5.RollForward.Block.Header.OpCert["kesPeriod"] != nil {
+			period = r5.RollForward.Block.Header.OpCert["kesPeriod"].(uint64)
+		}
+		opCert := OpCert{
+			Count: count,
+			Kes:   Kes{Period: period, VerificationKey: string(vk)},
+		}
+
 		issuer := BlockIssuer{VerificationKey: r5.RollForward.Block.Header.IssuerVK, VrfVerificationKey: r5.RollForward.Block.Header.IssuerVrf, OperationalCertificate: opCert, LeaderValue: leaderValue}
 		block := Block{
 			Type:         "praos",

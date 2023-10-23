@@ -577,6 +577,282 @@ func TestPraosResponse(t *testing.T) {
 	}
 }
 
+func TestCompatibleResult(t *testing.T) {
+	dataRequestNext := `{
+		"RollForward": {
+			"block": {
+				"babbage": {
+					"body": [
+						{
+							"witness": {
+								"signatures": {
+									"06f398b7fdd5a32d3de808fb1d3b32be177f2d2878e6b19845aeaabf8b94661c": "huZkCWpiS7YvXEmnfr5QNrvD9Lfe5hXOO3uFdXb+GtzO4DsnD9P28hvsowrgKBs5g6C0M5hHfNWTzUfcUm25/g==",
+									"b420fafa7256edf97efa07c31f28fd072b528b81040cc8585b4a261337b2cde0": "HMGGGy/U8v+LQy+yunqz0BtZv2CQoHWfCi2KeZCXCDZ2nKtt1DTJEQz9Hdb0affxpMIcV4560Uw9I67ZRMVR/w=="
+								},
+								"scripts": {
+									"6988f97425839f8caa8757e054a28667567b59c19dd38c3f280f25e9": {
+										"native": {
+											"startsAt": 46090
+										}
+									},
+									"a37f946a84f2ec6d21929be44eb0bca522c560ef17094ecccfe2f6d1": {
+										"native": {
+											"startsAt": 79106
+										}
+									}
+								},
+								"datums": {},
+								"redeemers": {
+									"certificate:0": {
+										"redeemer": "d8668219032d80",
+										"executionUnits": {
+											"memory": 2009715596563484410,
+											"steps": 6764152604174301894
+										}
+									}
+								},
+								"bootstrap": []
+							},
+							"raw": "hKsAgYJYILswpCweYvCv2l8KTopWL3oTokzqAO6BkXuGuJ6AExSqAg2Bglgg7hVazpxAKSB0y2r/jJzN0nPIFkj/EUnvNrzqbruKPiUCAYAQowBYOSANlOF0cy75quc/OVq0RQe/qYPWUCPBGpUfDDLkDZThdHMu+arnPzlatEUHv6mD1lAjwRqVHwwy5AEAAoIAWCCuhdJFo9AL/eAfWfPE/gtL+uHLN+nPkZKerc6kmFcR3gIZAr0DGdR/BIGKA1gc4KcUMZgSw/dzugTsXWs//NWq2FAGgFsEewglQVggAmi+nb0ERuqiF+HeyPOZJJMF5VHX/BQ33YRSH3SqYhwZA+AY3NgeggECWB3h4KcUMZgSw/dzugTsXWs//NWq2FAGgFsEewglQYCA9gaCoBlFbggZ1/cOgVgcDZThdHMu+arnPzlatEUHv6mD1lAjwRqVHwwy5AdYIAMXCi51l7e349hMBTkdE5pisVfnh4bYwILync9MERMUowCCglggBvOYt/3Voy096Aj7HTsyvhd/LSh45rGYRa6qv4uUZhxYQIbmZAlqYku2L1xJp36+UDa7w/S33uYVzjt7hXV2/hrczuA7Jw/T9vIb7KMK4CgbOYOgtDOYR3zVk81H3FJtuf6CWCC0IPr6clbt+X76B8MfKP0HK1KLgQQMyFhbSiYTN7LN4FhAHMGGGy/U8v+LQy+yunqz0BtZv2CQoHWfCi2KeZCXCDZ2nKtt1DTJEQz9Hdb0affxpMIcV4560Uw9I67ZRMVR/wGCggQZtAqCBBoAATUCBYGEAgDYZoIZAy2Aghsb4/Gv6LqO+htd3xj0mle6xvXZAQOhAKIAYlA3AgA=",
+							"id": "8bc0405aa28ef6c43883e7e96600bbffc1d20e932607c7b1be514296dd025aec",
+							"body": {
+								"inputs": [
+									{
+										"txId": "bb30a42c1e62f0afda5f0a4e8a562f7a13a24cea00ee81917b86b89e801314aa",
+										"index": 2
+									}
+								],
+								"collaterals": [
+									{
+										"txId": "ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e25",
+										"index": 2
+									}
+								],
+								"references": [],
+								"collateralReturn": {
+									"address": "addr_test1yqxefct5wvh0n2h88uu44dz9q7l6nq7k2q3uzx54ruxr9eqdjnshguewlx4ww0eet26y2pal4xpav5prcydf28cvxtjqzdy9kg",
+									"value": {
+										"coins": 0,
+										"assets": {}
+									},
+									"datumHash": "ae85d245a3d00bfde01f59f3c4fe0b4bfae1cb37e9cf91929eadcea4985711de",
+									"datum": null,
+									"script": null
+								},
+								"totalCollateral": null,
+								"outputs": [],
+								"certificates": [
+									{
+										"poolRegistration": {
+											"id": "pool1uzn3gvvcztplwua6qnk966elln264kzsq6q9kprmpqj5zytzn03",
+											"vrf": "0268be9dbd0446eaa217e1dec8f399249305e551d7fc1437dd84521f74aa621c",
+											"pledge": 992,
+											"cost": 220,
+											"margin": "1/2",
+											"rewardAccount": "stake1u8s2w9p3nqfv8amnhgzwchtt8l7dt2kc2qrgqkcy0vyz2sgltd8xl",
+											"owners": [],
+											"relays": [],
+											"metadata": null
+										}
+									}
+								],
+								"withdrawals": {},
+								"fee": 701,
+								"validityInterval": {
+									"invalidBefore": 55287,
+									"invalidHereafter": 54399
+								},
+								"update": {
+									"proposal": {},
+									"epoch": 17774
+								},
+								"mint": {
+									"coins": 0,
+									"assets": {}
+								},
+								"network": null,
+								"scriptIntegrityHash": null,
+								"requiredExtraSignatures": [
+									"0d94e174732ef9aae73f395ab44507bfa983d65023c11a951f0c32e4"
+								]
+							},
+							"metadata": {
+								"hash": "03170a2e7597b7b7e3d84c05391d139a62b157e78786d8c082f29dcf4c111314",
+								"body": {
+									"blob": {
+										"0": {
+											"string": "P7"
+										},
+										"2": {
+											"int": 0
+										}
+									},
+									"scripts": []
+								}
+							},
+							"inputSource": "inputs"
+						}
+					],
+					"header": {
+						"protocolVersion": {
+							"major": 345,
+							"minor": 373
+						},
+						"opCert": {
+							"hotVk": "75eWZ631+ApZTU7CILYZgCQKkhchDH7PaMdyqcrYA8E=",
+							"count": 0,
+							"kesPeriod": 2,
+							"sigma": "dTXoCl4HOLeieRvHy24lCNYIUVW135+iokEMbfMJu6zmdbxW9Swg0LUFD2yy86qu1p0BSjJWNvckLuI8XOGwnw=="
+						},
+						"signature": "yK1nKo9qm3oLLVJMNrSl/gtN1qmk/7hKVj+/b3w+uOEPUrtw3vKSV+uwRx5fh61NxocNt+ISF/6yeTgfibazB45TE5kdkDkz78sLb4Rog1Z0I5JDqoli43O4aCtO9LwezTRzxJ+94d4W9sRsZCOatJUO2ewDHLZpIGmWHrDjw18cz0eUwXCGoI8nHbFhLiVCpXZSgv6ABVOx0G2b2dldlh7ykZ5m6aWWs7ELFtSGyDIuAuMQeue64G94+UnCxQE1LpWMKAma8ZGY1ktA9naU+ow5cTOmno/Tyqqgi1/sjX/cwC5lm3BmoF0lHod/Qq/pEQGx97WMJ4IjBaZ71vqPeMUnf5tVMRW/xGxhgfutZTK+FA3vNFcT0NzIuUADlDiK7aUidWM2KnImd6mV1UO+NkmSTjf4PrfoQnCJlY1XVIbGN/bMerDECHCHAXXdH9+0YH4tPOU1ZHI9XnauacBT2/AN8RUAgIEHGoMjnsShg/oXtgmrS6O7OIaTzyMXdcQAjCNaB9ewRU+LmrXfyTivj6Qm8rng7s/ZUgAlVtPZd2/dkumi8+7Krw2uobTqER+ZGh6Gbthi2OcIjX7VGCPABg==",
+						"vrfInput": {
+							"output": "m8rQn8CgZA51x/OeXvKOA1oSYh2wtU6EVm0DhIxce9wiaFkkaGqcL/8cIzwHXGAG0TDqM+fXt7kmCLWmQ64UUg==",
+							"proof": "7JFp5EqDQARMBnRBzTEFx3jVdl7lcVIAE86jOpI9N8tdbpi7x9EYxNwzlRg/1fmXWcgyK7YVUCS9N/wPSk6Aa6s+AGeyZBuiocg4lB/K5gs="
+						},
+						"blockHeight": 5,
+						"slot": 7,
+						"prevHash": "genesis",
+						"issuerVk": "97211ca376ccc3a547fb579251879690f2f91911b84496e745f5c873438d653b",
+						"issuerVrf": "syNCTuYbTRjsWXbdnEsdufWPNBzUl8rgpa9ydwxjh7M=",
+						"blockSize": 2,
+						"blockHash": "0268be9dbd0446eaa217e1dec8f399249305e551d7fc1437dd84521f74aa621c"
+					},
+					"headerHash": "ae85d245a3d00bfde01f59f3c4fe0b4bfae1cb37e9cf91929eadcea4985711de"
+				}
+			},
+			"tip": {
+				"slot": 795,
+				"hash": "5230df78c87a3a1726f0083b3fdc0541e423e1a417913ebc7ff22037d1f3ca1c",
+				"blockNo": 16367053
+			}
+		}
+	}`
+
+	var method1 CompatibleResultNextBlock
+	err := json.Unmarshal([]byte(dataRequestNext), &method1)
+	if err != nil {
+		t.Fatalf("error unmarshalling response: %v", err)
+	}
+
+	dataNextBlock := `{
+        "direction": "forward",
+        "block": {
+            "type": "bft",
+            "era": "byron",
+            "id": "21d89eb76817a3ea1b9df033526f833cef18c4c762c356922eafb148bc14001e",
+            "ancestor": "aad78a13b50a014a24633c7d44fd8f8d18f67bbb3fa9cbcedf834ac899759dcd",
+            "height": 6574977808651210019,
+            "slot": 3294403856197716808,
+            "size": {
+                "bytes": 921
+            },
+            "transactions": [],
+            "operationalCertificates": [],
+            "protocol": {
+                "id": 100,
+                "version": {
+                    "major": 892,
+                    "minor": 51768,
+                    "patch": 35
+                },
+                "software": {
+                    "appName": "sDSF7",
+                    "number": 4117586641
+                },
+                "update": {
+                    "proposal": {
+                        "version": {
+                            "major": 29680,
+                            "minor": 55074,
+                            "patch": 14
+                        },
+                        "software": {
+                            "appName": "",
+                            "number": 1115902224
+                        },
+                        "parameters": {
+                            "scriptVersion": 25799,
+                            "slotDuration": 66450280671243551,
+                            "maxBlockBodySize": {
+                                "bytes": 6332592073220457
+                            },
+                            "maxTransactionSize": {
+                                "bytes": 81061672327968174
+                            },
+                            "maxUpdateProposalSize": {
+                                "bytes": 172822501139406362
+                            },
+                            "multiPartyComputationThreshold": "288921139725109/500000000000000",
+                            "heavyDelegationThreshold": "138029086789251/200000000000000",
+                            "updateProposalThreshold": "294859239649641/500000000000000",
+                            "updateProposalTimeToLive": 16087585201267149304,
+                            "unlockStakeEpoch": 2481827810661368817,
+                            "softForkInitThreshold": "187743902107349/200000000000000",
+                            "softForkMinThreshold": "4036481357189/500000000000000",
+                            "softForkDecrementThreshold": "13675322648881/40000000000000"
+                        },
+                        "metadata": {}
+                    },
+                    "votes": []
+                }
+            },
+            "issuer": {
+                "verificationKey": "8ece824656e8007745e655f080ced6a86012a26cd667232e0b810b1dd2d6555cb8a2405a55c46ce9fb0346bffb6cd7a8cd294d8950eeba7f6ba9c4fe26256b24"
+            },
+            "delegate": {
+                "verificationKey": "8ece824656e8007745e655f080ced6a86012a26cd667232e0b810b1dd2d6555cb8a2405a55c46ce9fb0346bffb6cd7a8cd294d8950eeba7f6ba9c4fe26256b24"
+            }
+        },
+        "tip": {
+            "slot": 46734,
+            "id": "4cbfd2af37df07a6bab5850b8122ed56708b4b57676cd23a6b564d33907a52e9",
+            "height": 3642099
+        }
+	}`
+
+	var method2 CompatibleResultNextBlock
+	err = json.Unmarshal([]byte(dataNextBlock), &method2)
+	if err != nil {
+		t.Fatalf("error unmarshalling response: %v", err)
+	}
+
+	dataFindIntersect := `{
+        "IntersectionFound": {
+            "point": "origin",
+            "tip": {
+                "slot": 62344,
+                "hash": "2208e439244a1d0ef238352e3693098aba9de9dd0154f9056551636c8ed15dc1",
+                "blockNo": 2
+            }
+        }
+	}`
+
+	var method3 CompatibleResultFindIntersection
+	err = json.Unmarshal([]byte(dataFindIntersect), &method3)
+	if err != nil {
+		t.Fatalf("error unmarshalling response: %v", err)
+	}
+
+	dataFindIntersection := `{
+        "intersection": {
+            "slot": 71768,
+            "id": "990aad500baaf649562318c3e23f96207a4fc41004902adf02716c9fa4b13827"
+        },
+        "tip": {
+            "slot": 24383,
+            "id": "aad78a13b50a014a24633c7d44fd8f8d18f67bbb3fa9cbcedf834ac899759dcd",
+            "height": 1
+        }
+	}`
+
+	var method4 CompatibleResultNextBlock
+	err = json.Unmarshal([]byte(dataFindIntersection), &method4)
+	if err != nil {
+		t.Fatalf("error unmarshalling response: %v", err)
+	}
+
+}
+
 func TestVasil_DatumParsing_Base64(t *testing.T) {
 	data := `{"datums": {"a": "2HmfWBzIboNaGwk6qBYQ/Tk19GPOUpkpze2Ldfe1HOZEQpwK/w=="}}`
 	var response Witness
