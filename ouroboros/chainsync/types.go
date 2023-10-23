@@ -801,7 +801,7 @@ func (c *CompatibleResponsePraos) UnmarshalJSON(data []byte) error {
 	} else {
 		// All we really care about is the result.
 		if r5.Result.IntersectionFound != nil {
-			c.Method = "findIntersection"
+			c.Method = FindIntersectionMethod
 
 			var p Point
 			p.pointType = r5.Result.IntersectionFound.Point.pointType
@@ -824,7 +824,7 @@ func (c *CompatibleResponsePraos) UnmarshalJSON(data []byte) error {
 			findIntersection.Tip = &t
 			c.Result = &findIntersection
 		} else if r5.Result.IntersectionNotFound != nil {
-			c.Method = "findIntersection"
+			c.Method = FindIntersectionMethod
 
 			var t Tip
 			t.Slot = r5.Result.IntersectionNotFound.Tip.Slot
@@ -837,7 +837,7 @@ func (c *CompatibleResponsePraos) UnmarshalJSON(data []byte) error {
 			e.Message = "Intersection not found - Conversion from a v5 Ogmigo call"
 			c.Error = &e
 		} else if r5.Result.RollForward != nil {
-			c.Method = "nextBlock"
+			c.Method = NextBlockMethod
 			var t Tip
 			t.Slot = r5.Result.RollForward.Tip.Slot
 			t.ID = r5.Result.RollForward.Tip.Hash
@@ -920,7 +920,7 @@ func (c *CompatibleResponsePraos) UnmarshalJSON(data []byte) error {
 			nextBlock.Block = &b
 			c.Result = &nextBlock
 		} else if r5.Result.RollBackward != nil {
-			c.Method = "nextBlock"
+			c.Method = NextBlockMethod
 			var t Tip
 			t.Slot = r5.Result.RollBackward.Tip.Slot
 			t.ID = r5.Result.RollBackward.Tip.Hash
@@ -984,7 +984,6 @@ func (r *ResponsePraos) UnmarshalJSON(b []byte) error {
 	}
 
 	r.JsonRpc = m.JsonRpc
-	r.Method = m.Method
 	r.ID = m.ID
 
 	if m.Error != nil {
@@ -996,6 +995,7 @@ func (r *ResponsePraos) UnmarshalJSON(b []byte) error {
 	} else {
 		switch m.Method {
 		case FindIntersectionMethod, FindIntersectMethod:
+			r.Method = FindIntersectionMethod
 			var findIntersection CompatibleResultFindIntersection
 			if err := json.Unmarshal(m.Result, &findIntersection); err != nil {
 				return err
@@ -1003,6 +1003,7 @@ func (r *ResponsePraos) UnmarshalJSON(b []byte) error {
 			r.Result = findIntersection
 
 		case NextBlockMethod, RequestNextMethod:
+			r.Method = NextBlockMethod
 			var nextBlock CompatibleResultNextBlock
 			if err := json.Unmarshal(m.Result, &nextBlock); err != nil {
 				return err
@@ -1017,18 +1018,19 @@ func (r *ResponsePraos) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (r ResponsePraos) MustFindIntersectResult() ResultFindIntersectionPraos {
+func (r ResponsePraos) MustFindIntersectResult() CompatibleResultFindIntersection {
 	if r.Method != FindIntersectionMethod {
 		panic(fmt.Errorf("must only use *Must* methods after switching on the findIntersection method; called on %v", r.Method))
 	}
-	return r.Result.(ResultFindIntersectionPraos)
+	return r.Result.(CompatibleResultFindIntersection)
 }
 
-func (r ResponsePraos) MustNextBlockResult() ResultNextBlockPraos {
+func (r ResponsePraos) MustNextBlockResult() CompatibleResultNextBlock {
 	if r.Method != NextBlockMethod {
 		panic(fmt.Errorf("must only use *Must* methods after switching on the nextBlock method; called on %v", r.Method))
 	}
-	return r.Result.(ResultNextBlockPraos)
+	fmt.Printf("type of r.Result is %T\n", r.Result)
+	return r.Result.(CompatibleResultNextBlock)
 }
 
 type Tx struct {
