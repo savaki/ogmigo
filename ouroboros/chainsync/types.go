@@ -761,10 +761,16 @@ func (c *CompatibleResultNextBlock) UnmarshalJSON(data []byte) error {
 		return nil
 	} else if r5.RollBackward != nil {
 		tip := Tip{Height: r5.RollBackward.Tip.BlockNo, ID: r5.RollBackward.Tip.Hash, Slot: r5.RollBackward.Tip.Slot}
+		var point Point
+		if r5.RollBackward.Point.pointType == PointTypeString {
+			point = Point{pointType: PointTypeString, pointString: r5.RollBackward.Point.pointString}
+		} else {
+			point = Point{pointType: PointTypeStruct, pointStruct: &PointStruct{ID: r5.RollBackward.Point.pointStruct.Hash, Slot: r5.RollBackward.Point.pointStruct.Slot}}
+		}
 		c.Direction = "backward"
 		c.Tip = &tip
 		c.Block = nil
-		c.Point = nil // TODO
+		c.Point = &point
 
 		return nil
 	}
