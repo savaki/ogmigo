@@ -633,9 +633,8 @@ func (c *CompatibleResultFindIntersection) UnmarshalJSON(data []byte) error {
 	} else if r5.IntersectionNotFound != nil {
 		// Emulate the v6 IntersectionNotFound error as best as possible.
 		tip := Tip{
-			Height: r5.IntersectionFound.Tip.BlockNo,
-			ID:     r5.IntersectionFound.Tip.Hash,
-			Slot:   r5.IntersectionFound.Tip.Slot,
+			Height: r5.IntersectionNotFound.Tip.BlockNo,
+			ID:     r5.IntersectionNotFound.Tip.Hash,
 		}
 		err := ResultError{Code: 1000, Message: "Intersection not found", Data: &tip}
 		c.Error = &err
@@ -761,7 +760,7 @@ func (c *CompatibleResultNextBlock) UnmarshalJSON(data []byte) error {
 
 		return nil
 	} else if r5.RollBackward != nil {
-		tip := Tip{Height: r5.RollForward.Tip.BlockNo, ID: r5.RollForward.Tip.Hash, Slot: r5.RollForward.Tip.Slot}
+		tip := Tip{Height: r5.RollBackward.Tip.BlockNo, ID: r5.RollBackward.Tip.Hash, Slot: r5.RollBackward.Tip.Slot}
 		c.Direction = "backward"
 		c.Tip = &tip
 		c.Block = nil

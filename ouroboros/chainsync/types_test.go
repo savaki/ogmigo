@@ -578,7 +578,7 @@ func TestPraosResponse(t *testing.T) {
 }
 
 func TestCompatibleResult(t *testing.T) {
-	dataRequestNext := `{
+	dataRequestNextForward := `{
 		"RollForward": {
 			"block": {
 				"babbage": {
@@ -729,12 +729,32 @@ func TestCompatibleResult(t *testing.T) {
 	}`
 
 	var method1 CompatibleResultNextBlock
-	err := json.Unmarshal([]byte(dataRequestNext), &method1)
+	err := json.Unmarshal([]byte(dataRequestNextForward), &method1)
 	if err != nil {
 		t.Fatalf("error unmarshalling response: %v", err)
 	}
 
-	dataNextBlock := `{
+	dataRequestNextBackward := `{
+        "RollBackward": {
+            "point": {
+                "slot": 92267,
+                "hash": "6487fa2e6f0e85ef6e887931381057146060bfd2ed7324f7829c369c3628dc16"
+            },
+            "tip": {
+                "slot": 4744,
+                "hash": "92cdf578c47085a5992256f0dcf97d0b19f1f1c9de4d5fe30c3ace6191b6e5db",
+                "blockNo": 3015040
+            }
+        }
+	}`
+
+	var method2 CompatibleResultNextBlock
+	err = json.Unmarshal([]byte(dataRequestNextBackward), &method2)
+	if err != nil {
+		t.Fatalf("error unmarshalling response: %v", err)
+	}
+
+	dataNextBlockForward := `{
         "direction": "forward",
         "block": {
             "type": "bft",
@@ -810,13 +830,32 @@ func TestCompatibleResult(t *testing.T) {
         }
 	}`
 
-	var method2 CompatibleResultNextBlock
-	err = json.Unmarshal([]byte(dataNextBlock), &method2)
+	var method3 CompatibleResultNextBlock
+	err = json.Unmarshal([]byte(dataNextBlockForward), &method3)
 	if err != nil {
 		t.Fatalf("error unmarshalling response: %v", err)
 	}
 
-	dataFindIntersect := `{
+	dataNextBlockBackward := `{
+        "direction": "backward",
+        "point": {
+            "slot": 92267,
+            "id": "b5f556f2ff67952ca1237ccb40dbf33f213ce15b769597d12188e9ab8fbd7bdf"
+        },
+        "tip": {
+            "slot": 4744,
+            "id": "669ea8a00b7307b08fae2a6eb3a59d42f7d32e80860320208938019789bef05f",
+            "height": 3015040
+        }
+	}`
+
+	var method4 CompatibleResultNextBlock
+	err = json.Unmarshal([]byte(dataNextBlockBackward), &method4)
+	if err != nil {
+		t.Fatalf("error unmarshalling response: %v", err)
+	}
+
+	dataFindIntersectFound := `{
         "IntersectionFound": {
             "point": "origin",
             "tip": {
@@ -827,13 +866,29 @@ func TestCompatibleResult(t *testing.T) {
         }
 	}`
 
-	var method3 CompatibleResultFindIntersection
-	err = json.Unmarshal([]byte(dataFindIntersect), &method3)
+	var method5 CompatibleResultFindIntersection
+	err = json.Unmarshal([]byte(dataFindIntersectFound), &method5)
 	if err != nil {
 		t.Fatalf("error unmarshalling response: %v", err)
 	}
 
-	dataFindIntersection := `{
+	dataFindIntersectNotFound := `{
+        "IntersectionNotFound": {
+            "tip": {
+                "slot": 36991,
+                "hash": "f63498b4ae65be466e4a71878971b9c524458996450b0ff8262cddf3f0d99229",
+                "blockNo": 6
+            }
+        }
+	}`
+
+	var method6 CompatibleResultFindIntersection
+	err = json.Unmarshal([]byte(dataFindIntersectNotFound), &method6)
+	if err != nil {
+		t.Fatalf("error unmarshalling response: %v", err)
+	}
+
+	dataFindIntersectionFound := `{
         "intersection": {
             "slot": 71768,
             "id": "990aad500baaf649562318c3e23f96207a4fc41004902adf02716c9fa4b13827"
@@ -845,12 +900,31 @@ func TestCompatibleResult(t *testing.T) {
         }
 	}`
 
-	var method4 CompatibleResultNextBlock
-	err = json.Unmarshal([]byte(dataFindIntersection), &method4)
+	var method7 CompatibleResultNextBlock
+	err = json.Unmarshal([]byte(dataFindIntersectionFound), &method7)
 	if err != nil {
 		t.Fatalf("error unmarshalling response: %v", err)
 	}
 
+	dataFindIntersectionNotFound := `{
+		"error": {
+			"code": 1000,
+			"message": "No intersection found.",
+			"data": {
+				"tip": {
+					"slot": 68040,
+					"id": "ce8c0f3211d39ae0db42fb105d076f91132449d0a96e8ff092b01488af3ae12b",
+					"height": 13
+				}
+			}
+		}
+	}`
+
+	var method8 CompatibleResultNextBlock
+	err = json.Unmarshal([]byte(dataFindIntersectionNotFound), &method8)
+	if err != nil {
+		t.Fatalf("error unmarshalling response: %v", err)
+	}
 }
 
 func TestVasil_DatumParsing_Base64(t *testing.T) {
