@@ -10,14 +10,14 @@ import (
 
 	"github.com/SundaeSwap-finance/ogmigo/v6"
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
-	v5 "github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync/v5"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync/compatibility"
 )
 
 func main() {
 	var callback ogmigo.ChainSyncFunc = func(ctx context.Context, data []byte) error {
 
 		// Quick-and-dirty way to distinguish b/w 2 different responses.
-		var response v5.CompatibleResponsePraos
+		var response compatibility.CompatibleResponsePraos
 		if err := json.Unmarshal(data, &response); err != nil {
 			fmt.Println("Failed Unmarshal: %v", err)
 			return nil
