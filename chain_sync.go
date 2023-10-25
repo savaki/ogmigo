@@ -337,7 +337,6 @@ func getInit(ctx context.Context, store Store, pp ...chainsync.Point) (data []by
 
 // getPoint returns the first point from the list of json encoded chainsync.Responses provided
 // multiple Responses allow for the possibility of a Rollback being included in the set
-// TODO - RollForward has a block. RollBackward has a point. How do we handle this?
 func getPoint(data ...[]byte) (chainsync.Point, bool) {
 	for _, d := range data {
 		if len(d) == 0 {
@@ -346,12 +345,13 @@ func getPoint(data ...[]byte) (chainsync.Point, bool) {
 
 		var response chainsync.ResponsePraos
 		if err := json.Unmarshal(d, &response); err == nil {
-			if response.Result != nil {
-				if response.Result.Direction == "forward" {
-					ps := response.Result.Block.PointStruct()
+			if response.Method == chainsync.NextBlockMethod {
+				nbr := response.MustNextBlockResult()
+				if nbr.Direction == chainsync.RollForwardString {
+					ps := nbr.Block.PointStruct()
 					return ps.Point(), true
-				} else if response.Result.Direction == "backward" {
-					return response.Result.Point, true
+				} else if nbr.Direction == chainsync.RollBackwardString {
+					return *nbr.Point, true
 				}
 			}
 		}

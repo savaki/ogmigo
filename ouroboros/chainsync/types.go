@@ -348,9 +348,9 @@ type ProtocolVersion struct {
 }
 
 type RollBackward struct {
-	Direction string `json:"direction,omitempty" dynamodbav:"direction,omitempty"`
-	Tip       Tip    `json:"tip,omitempty"   dynamodbav:"tip,omitempty"`
-	Point     Point  `json:"point,omitempty" dynamodbav:"point,omitempty"`
+	Direction string            `json:"direction,omitempty" dynamodbav:"direction,omitempty"`
+	Tip       Tip               `json:"tip,omitempty"   dynamodbav:"tip,omitempty"`
+	Point     RollBackwardPoint `json:"point,omitempty" dynamodbav:"point,omitempty"`
 }
 
 type RollBackwardPoint struct {
@@ -373,12 +373,27 @@ func (r Block) PointStruct() PointStruct {
 	}
 }
 
+// Covers everything except Byron-era blocks.
+type ResultFindIntersectionPraos struct {
+	Intersection *Point          `json:"intersection,omitempty" dynamodbav:"intersection,omitempty"`
+	Tip          *Tip            `json:"tip,omitempty"          dynamodbav:"tip,omitempty"`
+	Error        *ResultError    `json:"error,omitempty"        dynamodbav:"error,omitempty"`
+	ID           json.RawMessage `json:"id,omitempty"           dynamodbav:"id,omitempty"`
+}
+
+type ResultError struct {
+	Code    uint32          `json:"code,omitempty"    dynamodbav:"code,omitempty"`
+	Message string          `json:"message,omitempty" dynamodbav:"message,omitempty"`
+	Data    *Tip            `json:"data,omitempty"    dynamodbav:"data,omitempty"` // Forward
+	ID      json.RawMessage `json:"id,omitempty"      dynamodbav:"id,omitempty"`
+}
+
 // Covers all blocks except Byron-era blocks.
-type ResultPraos struct {
+type ResultNextBlockPraos struct {
 	Direction string `json:"direction,omitempty" dynamodbav:"direction,omitempty"`
 	Tip       *Tip   `json:"tip,omitempty"       dynamodbav:"tip,omitempty"`
 	Block     *Block `json:"block,omitempty"     dynamodbav:"block,omitempty"` // Forward
-	Point     Point  `json:"point,omitempty"     dynamodbav:"point,omitempty"` // Backward
+	Point     *Point `json:"point,omitempty"     dynamodbav:"point,omitempty"` // Backward
 }
 
 type Tip struct {
@@ -387,39 +402,114 @@ type Tip struct {
 	Height uint64 `json:"height,omitempty" dynamodbav:"height,omitempty"`
 }
 
+func (t Tip) String() string {
+	return fmt.Sprintf("slot=%v id=%v height=%v", t.Slot, t.ID, t.Height)
+}
+
 type ResponsePraos struct {
 	JsonRpc string          `json:"jsonrpc,omitempty" dynamodbav:"jsonrpc,omitempty"`
 	Method  string          `json:"method,omitempty"  dynamodbav:"method,omitempty"`
-	Result  *ResultPraos    `json:"result,omitempty"  dynamodbav:"result,omitempty"`
+	Result  interface{}     `json:"result,omitempty"  dynamodbav:"result,omitempty"`
+	Error   *ResultError    `json:"error,omitempty"   dynamodbav:"error,omitempty"`
 	ID      json.RawMessage `json:"id,omitempty"      dynamodbav:"id,omitempty"`
 }
 
+const FindIntersectionMethod = "findIntersection"
+const NextBlockMethod = "nextBlock"
+const FindIntersectMethod = "FindIntersect"
+const RequestNextMethod = "RequestNext"
+
+const RollForwardString = "forward"
+const RollBackwardString = "backward"
+
+func (r *ResponsePraos) UnmarshalJSON(b []byte) error {
+	var m struct {
+		JsonRpc string          `json:"jsonrpc"`
+		Method  string          `json:"method" json:"methodname"`
+		ID      json.RawMessage `json:"ID"`
+		Result  json.RawMessage `json:"result"`
+		Error   json.RawMessage `json:"error"`
+	}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return err
+	}
+
+	r.JsonRpc = m.JsonRpc
+	r.ID = m.ID
+
+	if m.Error != nil {
+		var resultError ResultError
+		if err := json.Unmarshal(m.Error, &resultError); err != nil {
+			return err
+		}
+		r.Error = &resultError
+	} else {
+		switch m.Method {
+		case FindIntersectionMethod, FindIntersectMethod:
+			r.Method = FindIntersectionMethod
+			var findIntersection ResultFindIntersectionPraos
+			if err := json.Unmarshal(m.Result, &findIntersection); err != nil {
+				return err
+			}
+			r.Result = findIntersection
+
+		case NextBlockMethod, RequestNextMethod:
+			r.Method = NextBlockMethod
+			var nextBlock ResultNextBlockPraos
+			if err := json.Unmarshal(m.Result, &nextBlock); err != nil {
+				return err
+			}
+			r.Result = nextBlock
+
+		default:
+			return fmt.Errorf("unknown method: '%v'", r.Method)
+		}
+	}
+
+	return nil
+}
+
+func (r ResponsePraos) MustFindIntersectResult() ResultFindIntersectionPraos {
+	if r.Method != FindIntersectionMethod {
+		panic(fmt.Errorf("must only use *Must* methods after switching on the findIntersection method; called on %v", r.Method))
+	}
+	return r.Result.(ResultFindIntersectionPraos)
+}
+
+func (r ResponsePraos) MustNextBlockResult() ResultNextBlockPraos {
+	if r.Method != NextBlockMethod {
+		panic(fmt.Errorf("must only use *Must* methods after switching on the nextBlock method; called on %v", r.Method))
+	}
+	fmt.Printf("type of r.Result is %T\n", r.Result)
+	return r.Result.(ResultNextBlockPraos)
+}
+
 type Tx struct {
-	ID                       string                `json:"id,omitempty"                       dynamodbav:"id,omitempty"`
-	Spends                   string                `json:"spends,omitempty"                   dynamodbav:"spends,omitempty"`
-	Inputs                   []TxIn                `json:"inputs,omitempty"                   dynamodbav:"inputs,omitempty"`
-	References               []TxIn                `json:"references,omitempty"               dynamodbav:"references,omitempty"`
-	Collaterals              []TxIn                `json:"collaterals,omitempty"              dynamodbav:"collaterals,omitempty"`
-	TotalCollateral          *int64                `json:"totalCollateral,omitempty"          dynamodbav:"totalCollateral,omitempty"`
-	CollateralReturn         *TxOut                `json:"collateralReturn,omitempty"         dynamodbav:"collateralReturn,omitempty"`
-	Outputs                  TxOuts                `json:"outputs,omitempty"                  dynamodbav:"outputs,omitempty"`
-	Certificates             []json.RawMessage     `json:"certificates,omitempty"             dynamodbav:"certificates,omitempty"`
-	Withdrawals              map[string]Lovelace   `json:"withdrawals,omitempty"              dynamodbav:"withdrawals,omitempty"`
-	Fee                      Lovelace              `json:"fee,omitempty"                      dynamodbav:"fee,omitempty"`
-	ValidityInterval         ValidityInterval      `json:"validityInterval"                   dynamodbav:"validityInterval,omitempty"`
-	Mint                     []DoubleNestedInteger `json:"mint,omitempty"                     dynamodbav:"mint,omitempty"`
-	Network                  json.RawMessage       `json:"network,omitempty"                  dynamodbav:"network,omitempty"`
-	ScriptIntegrityHash      string                `json:"scriptIntegrityHash,omitempty"      dynamodbav:"scriptIntegrityHash,omitempty"`
-	RequiredExtraSignatories []string              `json:"requiredExtraSignatories,omitempty" dynamodbav:"requiredExtraSignatories,omitempty"`
-	RequiredExtraScripts     []string              `json:"requiredExtraScripts,omitempty"     dynamodbav:"requiredExtraScripts,omitempty"`
-	Proposals                json.RawMessage       `json:"proposals,omitempty"                dynamodbav:"proposals,omitempty"`
-	Votes                    json.RawMessage       `json:"votes,omitempty"                    dynamodbav:"votes,omitempty"`
-	Metadata                 json.RawMessage       `json:"metadata,omitempty"                 dynamodbav:"metadata,omitempty"`
-	Signatories              []json.RawMessage     `json:"signatories,omitempty"              dynamodbav:"signatories,omitempty"`
-	Scripts                  json.RawMessage       `json:"scripts,omitempty"                  dynamodbav:"scripts,omitempty"`
-	Datums                   Datums                `json:"datums,omitempty"                   dynamodbav:"datums,omitempty"`
-	Redeemers                json.RawMessage       `json:"redeemers,omitempty"                dynamodbav:"redeemers,omitempty"`
-	CBOR                     string                `json:"cbor,omitempty"                     dynamodbav:"cbor,omitempty"`
+	ID                       string              `json:"id,omitempty"                       dynamodbav:"id,omitempty"`
+	Spends                   string              `json:"spends,omitempty"                   dynamodbav:"spends,omitempty"`
+	Inputs                   []TxIn              `json:"inputs,omitempty"                   dynamodbav:"inputs,omitempty"`
+	References               []TxIn              `json:"references,omitempty"               dynamodbav:"references,omitempty"`
+	Collaterals              []TxIn              `json:"collaterals,omitempty"              dynamodbav:"collaterals,omitempty"`
+	TotalCollateral          *Lovelace           `json:"totalCollateral,omitempty"          dynamodbav:"totalCollateral,omitempty"`
+	CollateralReturn         *TxOut              `json:"collateralReturn,omitempty"         dynamodbav:"collateralReturn,omitempty"`
+	Outputs                  TxOuts              `json:"outputs,omitempty"                  dynamodbav:"outputs,omitempty"`
+	Certificates             []json.RawMessage   `json:"certificates,omitempty"             dynamodbav:"certificates,omitempty"`
+	Withdrawals              map[string]Lovelace `json:"withdrawals,omitempty"              dynamodbav:"withdrawals,omitempty"`
+	Fee                      Lovelace            `json:"fee,omitempty"                      dynamodbav:"fee,omitempty"`
+	ValidityInterval         ValidityInterval    `json:"validityInterval"                   dynamodbav:"validityInterval,omitempty"`
+	Mint                     DoubleNestedInteger `json:"mint,omitempty"                     dynamodbav:"mint,omitempty"`
+	Network                  json.RawMessage     `json:"network,omitempty"                  dynamodbav:"network,omitempty"`
+	ScriptIntegrityHash      string              `json:"scriptIntegrityHash,omitempty"      dynamodbav:"scriptIntegrityHash,omitempty"`
+	RequiredExtraSignatories []string            `json:"requiredExtraSignatories,omitempty" dynamodbav:"requiredExtraSignatories,omitempty"`
+	RequiredExtraScripts     []string            `json:"requiredExtraScripts,omitempty"     dynamodbav:"requiredExtraScripts,omitempty"`
+	Proposals                json.RawMessage     `json:"proposals,omitempty"                dynamodbav:"proposals,omitempty"`
+	Votes                    json.RawMessage     `json:"votes,omitempty"                    dynamodbav:"votes,omitempty"`
+	Metadata                 json.RawMessage     `json:"metadata,omitempty"                 dynamodbav:"metadata,omitempty"`
+	Signatories              []json.RawMessage   `json:"signatories,omitempty"              dynamodbav:"signatories,omitempty"`
+	Scripts                  json.RawMessage     `json:"scripts,omitempty"                  dynamodbav:"scripts,omitempty"`
+	Datums                   Datums              `json:"datums,omitempty"                   dynamodbav:"datums,omitempty"`
+	Redeemers                json.RawMessage     `json:"redeemers,omitempty"                dynamodbav:"redeemers,omitempty"`
+	CBOR                     string              `json:"cbor,omitempty"                     dynamodbav:"cbor,omitempty"`
 }
 
 type DoubleNestedInteger map[string]map[string]num.Int
