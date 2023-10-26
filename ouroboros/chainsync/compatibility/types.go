@@ -263,3 +263,25 @@ func (r CompatibleResponsePraos) MustNextBlockResult() CompatibleResultNextBlock
 	fmt.Printf("type of r.Result is %T\n", r.Result)
 	return r.Result.(CompatibleResultNextBlock)
 }
+
+// With v5, the Result type was explicitly marked in the JSON from Ogmigo. This made
+// JSON marshaling easy to consolidate. With v6, we don't have that luxury. The
+// workaround is to switch on the Method and cast the Result bytes.
+func (c CompatibleResponsePraos) GetResultBytes() (data []byte, err error) {
+	switch c.Method {
+	case chainsync.FindIntersectionMethod, chainsync.FindIntersectMethod:
+		return json.Marshal(c.Result.(chainsync.ResultFindIntersectionPraos))
+	case chainsync.NextBlockMethod, chainsync.RequestNextMethod:
+		return json.Marshal(c.Result.(chainsync.ResultNextBlockPraos))
+	default:
+		return nil, error(fmt.Errorf("unsupported method: %v", c.Method))
+	}
+}
+
+func ConvertPointStructV5ToV6(p v5.PointStructV5) chainsync.PointStruct {
+	return chainsync.PointStruct{
+		BlockNo: p.BlockNo,
+		ID:      p.Hash,
+		Slot:    p.Slot,
+	}
+}

@@ -128,11 +128,11 @@ type BlockHeaderV5 struct {
 }
 
 // Assume no Byron support.
-func (r BlockV5) PointStruct() PointStructV5 {
+func (b BlockV5) PointStruct() PointStructV5 {
 	return PointStructV5{
-		BlockNo: r.Header.BlockHeight,
-		Hash:    r.HeaderHash,
-		Slot:    r.Header.Slot,
+		BlockNo: b.Header.BlockHeight,
+		Hash:    b.HeaderHash,
+		Slot:    b.Header.Slot,
 	}
 }
 
