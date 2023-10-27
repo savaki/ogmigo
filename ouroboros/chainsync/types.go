@@ -365,11 +365,11 @@ type RollForward struct {
 	Block     Block  `json:"block,omitempty" dynamodbav:"block,omitempty"`
 }
 
-func (r Block) PointStruct() PointStruct {
+func (b Block) PointStruct() PointStruct {
 	return PointStruct{
-		BlockNo: r.Height,
-		ID:      r.ID,
-		Slot:    r.Slot,
+		BlockNo: b.Height,
+		ID:      b.ID,
+		Slot:    b.Slot,
 	}
 }
 
