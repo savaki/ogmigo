@@ -480,7 +480,6 @@ func (r ResponsePraos) MustNextBlockResult() ResultNextBlockPraos {
 	if r.Method != NextBlockMethod {
 		panic(fmt.Errorf("must only use *Must* methods after switching on the nextBlock method; called on %v", r.Method))
 	}
-	fmt.Printf("type of r.Result is %T\n", r.Result)
 	return r.Result.(ResultNextBlockPraos)
 }
 
