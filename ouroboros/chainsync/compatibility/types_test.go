@@ -446,7 +446,7 @@ func TestCompatibleResult(t *testing.T) {
         }
     }`
 
-	var method1 chainsync.ResultNextBlockPraos
+	var method1 CompatibleResultNextBlock
 	err := json.Unmarshal([]byte(dataRequestNextForward), &method1)
 	if err != nil {
 		t.Fatalf("error unmarshalling response: %v", err)
@@ -472,6 +472,7 @@ func TestCompatibleResult(t *testing.T) {
 		t.Fatalf("error unmarshalling response: %v", err)
 	}
 
+	// TODO - REPLACE WITH NON-BYRON DATA
 	dataNextBlockForward := `{
         "direction": "forward",
         "block": {

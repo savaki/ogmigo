@@ -17,12 +17,15 @@ package v5
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync/num"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/shared"
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -53,24 +56,40 @@ type TxV5 struct {
 func (t TxV5) ConvertToV6() chainsync.Tx {
 	withdrawals := make(map[string]chainsync.Lovelace)
 	for txid, amt := range t.Body.Withdrawals {
-		withdrawals[txid] = chainsync.Lovelace{Lovelace: num.Int64(amt), Extras: nil}
+		withdrawals[txid] = chainsync.Lovelace{Lovelace: num.Int64(amt)}
 	}
 
+	var tc *chainsync.Lovelace
+	if t.Body.TotalCollateral != nil {
+		tc = &chainsync.Lovelace{Lovelace: num.Int64(*t.Body.TotalCollateral)}
+	} else {
+		tc = nil
+	}
+	var cr *chainsync.TxOut
+	if t.Body.CollateralReturn != nil {
+		*cr = t.Body.CollateralReturn.ConvertToV6()
+	} else {
+		cr = nil
+	}
+
+	cbor, _ := base64.StdEncoding.DecodeString(t.Raw)
+	cborHex := hex.EncodeToString(cbor)
+	n, _ := json.Marshal(t.Body.Network)
 	tx := chainsync.Tx{
 		ID:                       t.ID,
 		Spends:                   t.InputSource,
-		Inputs:                   t.Body.Inputs,
-		References:               t.Body.References,
-		Collaterals:              t.Body.Collaterals,
-		TotalCollateral:          &chainsync.Lovelace{Lovelace: num.Int64(*t.Body.TotalCollateral)},
-		CollateralReturn:         (*chainsync.TxOut)(t.Body.CollateralReturn),
-		Outputs:                  t.Body.Outputs,
+		Inputs:                   t.Body.Inputs.ConvertToV6(),
+		References:               t.Body.References.ConvertToV6(),
+		Collaterals:              t.Body.Collaterals.ConvertToV6(),
+		TotalCollateral:          tc,
+		CollateralReturn:         cr,
+		Outputs:                  t.Body.Outputs.ConvertToV6(),
 		Certificates:             t.Body.Certificates,
 		Withdrawals:              withdrawals,
 		Fee:                      chainsync.Lovelace{Lovelace: t.Body.Fee},
-		ValidityInterval:         t.Body.ValidityInterval,
-		Mint:                     nil, // TODO - Differences appear to be too much to handle.
-		Network:                  t.Body.Network,
+		ValidityInterval:         t.Body.ValidityInterval.ConvertToV6(),
+		Mint:                     t.Body.Mint.ConvertToV6(false),
+		Network:                  string(n),
 		ScriptIntegrityHash:      t.Body.ScriptIntegrityHash,
 		RequiredExtraSignatories: t.Body.RequiredExtraSignatures,
 		RequiredExtraScripts:     nil,
@@ -81,34 +100,138 @@ func (t TxV5) ConvertToV6() chainsync.Tx {
 		Scripts:                  t.Witness.Scripts,
 		Datums:                   t.Witness.Datums,
 		Redeemers:                t.Witness.Redeemers,
-		CBOR:                     t.Raw,
+		CBOR:                     cborHex,
 	}
 
 	return tx
 }
 
-type Value struct {
-	Coins  num.Int
-	Assets map[string]num.Int
+type TxBodyV5 struct {
+	Certificates            []json.RawMessage  `json:"certificates,omitempty"            dynamodbav:"certificates,omitempty"`
+	Collaterals             TxInsV5            `json:"collaterals,omitempty"             dynamodbav:"collaterals,omitempty"`
+	Fee                     num.Int            `json:"fee,omitempty"                     dynamodbav:"fee,omitempty"`
+	Inputs                  TxInsV5            `json:"inputs,omitempty"                  dynamodbav:"inputs,omitempty"`
+	Mint                    *ValueV5           `json:"mint,omitempty"                    dynamodbav:"mint,omitempty"`
+	Network                 json.RawMessage    `json:"network,omitempty"                 dynamodbav:"network,omitempty"`
+	Outputs                 TxOutsV5           `json:"outputs,omitempty"                 dynamodbav:"outputs,omitempty"`
+	RequiredExtraSignatures []string           `json:"requiredExtraSignatures,omitempty" dynamodbav:"requiredExtraSignatures,omitempty"`
+	ScriptIntegrityHash     string             `json:"scriptIntegrityHash,omitempty"     dynamodbav:"scriptIntegrityHash,omitempty"`
+	TimeToLive              int64              `json:"timeToLive,omitempty"              dynamodbav:"timeToLive,omitempty"`
+	Update                  json.RawMessage    `json:"update,omitempty"                  dynamodbav:"update,omitempty"`
+	ValidityInterval        ValidityIntervalV5 `json:"validityInterval"                  dynamodbav:"validityInterval,omitempty"`
+	Withdrawals             map[string]int64   `json:"withdrawals,omitempty"             dynamodbav:"withdrawals,omitempty"`
+	CollateralReturn        *TxOutV5           `json:"collateralReturn,omitempty"        dynamodbav:"collateralReturn,omitempty"`
+	TotalCollateral         *int64             `json:"totalCollateral,omitempty"         dynamodbav:"totalCollateral,omitempty"`
+	References              TxInsV5            `json:"references,omitempty"              dynamodbav:"references,omitempty"`
 }
 
-type TxBodyV5 struct {
-	Certificates            []json.RawMessage          `json:"certificates,omitempty"            dynamodbav:"certificates,omitempty"`
-	Collaterals             []chainsync.TxIn           `json:"collaterals,omitempty"             dynamodbav:"collaterals,omitempty"`
-	Fee                     num.Int                    `json:"fee,omitempty"                     dynamodbav:"fee,omitempty"`
-	Inputs                  []chainsync.TxIn           `json:"inputs,omitempty"                  dynamodbav:"inputs,omitempty"`
-	Mint                    *Value                     `json:"mint,omitempty"                    dynamodbav:"mint,omitempty"`
-	Network                 json.RawMessage            `json:"network,omitempty"                 dynamodbav:"network,omitempty"`
-	Outputs                 chainsync.TxOuts           `json:"outputs,omitempty"                 dynamodbav:"outputs,omitempty"`
-	RequiredExtraSignatures []string                   `json:"requiredExtraSignatures,omitempty" dynamodbav:"requiredExtraSignatures,omitempty"`
-	ScriptIntegrityHash     string                     `json:"scriptIntegrityHash,omitempty"     dynamodbav:"scriptIntegrityHash,omitempty"`
-	TimeToLive              int64                      `json:"timeToLive,omitempty"              dynamodbav:"timeToLive,omitempty"`
-	Update                  json.RawMessage            `json:"update,omitempty"                  dynamodbav:"update,omitempty"`
-	ValidityInterval        chainsync.ValidityInterval `json:"validityInterval"                  dynamodbav:"validityInterval,omitempty"`
-	Withdrawals             map[string]int64           `json:"withdrawals,omitempty"             dynamodbav:"withdrawals,omitempty"`
-	CollateralReturn        *chainsync.TxOut           `json:"collateralReturn,omitempty"        dynamodbav:"collateralReturn,omitempty"`
-	TotalCollateral         *int64                     `json:"totalCollateral,omitempty"         dynamodbav:"totalCollateral,omitempty"`
-	References              []chainsync.TxIn           `json:"references,omitempty"              dynamodbav:"references,omitempty"`
+type TxInsV5 []TxInV5
+
+func (t TxInsV5) ConvertToV6() chainsync.TxIns {
+	var txIns chainsync.TxIns
+	for _, txIn := range t {
+		txIns = append(txIns, txIn.ConvertToV6())
+	}
+	return txIns
+}
+
+type TxInV5 struct {
+	TxHash string `json:"txId"  dynamodbav:"txId"`
+	Index  int    `json:"index" dynamodbav:"index"`
+}
+
+func (t TxInV5) String() string {
+	return t.TxHash + "#" + strconv.Itoa(t.Index)
+}
+
+func (t TxInV5) ConvertToV6() chainsync.TxIn {
+	id := chainsync.TxInID{ID: t.TxHash}
+	return chainsync.TxIn{Transaction: id, Index: t.Index}
+}
+
+type TxOutV5 struct {
+	Address   string          `json:"address,omitempty"   dynamodbav:"address,omitempty"`
+	Datum     string          `json:"datum,omitempty"     dynamodbav:"datum,omitempty"`
+	DatumHash string          `json:"datumHash,omitempty" dynamodbav:"datumHash,omitempty"`
+	Value     ValueV5         `json:"value,omitempty"     dynamodbav:"value,omitempty"`
+	Script    json.RawMessage `json:"script,omitempty"    dynamodbav:"script,omitempty"`
+}
+
+func (t TxOutV5) ConvertToV6() chainsync.TxOut {
+	return chainsync.TxOut{
+		Address:   t.Address,
+		Datum:     t.Datum,
+		DatumHash: t.DatumHash,
+		Value:     t.Value.ConvertToV6(true),
+		Script:    t.Script,
+	}
+}
+
+type TxOutsV5 []TxOutV5
+
+func (t TxOutsV5) ConvertToV6() chainsync.TxOuts {
+	txOuts := make(chainsync.TxOuts, len(t))
+	for _, txOut := range t {
+		txOuts = append(txOuts, txOut.ConvertToV6())
+	}
+	return txOuts
+}
+
+func (tt TxOutsV5) FindByAssetID(assetID shared.AssetID) (TxOutV5, bool) {
+	for _, t := range tt {
+		for gotAssetID := range t.Value.Assets {
+			if gotAssetID == assetID {
+				return t, true
+			}
+		}
+	}
+	return TxOutV5{}, false
+}
+
+type ValidityIntervalV5 struct {
+	InvalidBefore    uint64 `json:"invalidBefore,omitempty"     dynamodbav:"invalidBefore,omitempty"`
+	InvalidHereafter uint64 `json:"invalidHereafter,omitempty"  dynamodbav:"invalidHereafter,omitempty"`
+}
+
+func (v ValidityIntervalV5) ConvertToV6() chainsync.ValidityInterval {
+	return chainsync.ValidityInterval{
+		InvalidBefore: v.InvalidBefore,
+		InvalidAfter:  v.InvalidHereafter,
+	}
+}
+
+type ValueV5 struct {
+	Coins  num.Int                    `json:"coins,omitempty"  dynamodbav:"coins,omitempty"`
+	Assets map[shared.AssetID]num.Int `json:"assets,omitempty" dynamodbav:"assets,omitempty"`
+}
+
+// There's at least one special case in v6 (Mint) where the v5 "Coins" field doesn't
+// appear to be used. Give callers the option to skip it.
+func (v ValueV5) ConvertToV6(includeCoins bool) shared.Value {
+	assets := make(shared.Value)
+	adaMap := make(map[string]num.Int)
+	if includeCoins {
+		adaMap[shared.AdaAsset] = v.Coins
+		assets[shared.AdaPolicy] = adaMap
+	}
+	for policy, assetNum := range v.Assets {
+		policySplit := strings.Split(string(policy), ".")
+		policyID := ""
+		assetName := ""
+		if len(policySplit) == 2 {
+			policyID = policySplit[0]
+			assetName = policySplit[1]
+		} else {
+			policyID = policySplit[0]
+		}
+		if assets[policyID] == nil {
+			assetMap := make(map[string]num.Int)
+			assets[policyID] = assetMap
+		}
+		assets[policyID][assetName] = assetNum
+	}
+
+	return assets
 }
 
 type BlockV5 struct {
@@ -147,36 +270,84 @@ func (b BlockV5) ConvertToV6() chainsync.Block {
 		txArray = append(txArray, t.ConvertToV6())
 	}
 
-	fakeNonce := chainsync.Nonce{Output: "fake", Proof: "fake"}
+	nonceOutput := b.Header.Nonce["output"]
+	nonceProof := b.Header.Nonce["output"]
+	var nonce *chainsync.Nonce
+	if nonceOutput != "" && nonceProof != "" {
+		*nonce = chainsync.Nonce{Output: nonceOutput, Proof: nonceProof}
+	} else {
+		nonce = nil
+	}
+	majorVer := uint32(b.Header.ProtocolVersion["major"])
 	protocolVersion := chainsync.ProtocolVersion{
-		Major: uint32(b.Header.ProtocolVersion["Major"]),
-		Minor: uint32(b.Header.ProtocolVersion["Minor"]),
-		Patch: uint32(b.Header.ProtocolVersion["Patch"]),
+		Major: majorVer,
+		Minor: uint32(b.Header.ProtocolVersion["minor"]),
+		Patch: uint32(b.Header.ProtocolVersion["patch"]),
 	}
 	protocol := chainsync.Protocol{Version: protocolVersion}
-	leaderValue := chainsync.LeaderValue{Proof: "fake", Output: "fake"}
+
 	var opCert chainsync.OpCert
 	if b.Header.OpCert != nil {
 		var vk []byte
-		if b.Header.OpCert["hotVk"].([]byte) != nil {
+		if b.Header.OpCert["hotVk"] != nil {
 			vk, _ = base64.StdEncoding.DecodeString(b.Header.OpCert["hotVk"].(string))
 		}
+		count := b.Header.OpCert["count"]
+		kesPd := b.Header.OpCert["kesPeriod"]
 		opCert = chainsync.OpCert{
-			Count: b.Header.OpCert["count"].(uint64),
-			Kes:   chainsync.Kes{Period: b.Header.OpCert["kesPeriod"].(uint64), VerificationKey: string(vk)},
+			Count: uint64(count.(float64)),
+			Kes:   chainsync.Kes{Period: uint64(kesPd.(float64)), VerificationKey: string(vk)},
 		}
 	}
+
+	var leaderValue *chainsync.LeaderValue
+	if b.Header.LeaderValue["output"] != nil && b.Header.LeaderValue["proof"] != nil {
+		decodedOutput, _ := base64.StdEncoding.DecodeString(string(b.Header.LeaderValue["output"]))
+		decodedProof, _ := base64.StdEncoding.DecodeString(string(b.Header.LeaderValue["proof"]))
+		leaderValue = &chainsync.LeaderValue{
+			Output: string(decodedOutput),
+			Proof:  string(decodedProof),
+		}
+	} else {
+		leaderValue = nil
+	}
+
+	issuerVrf, _ := base64.StdEncoding.DecodeString(b.Header.IssuerVrf)
 	issuer := chainsync.BlockIssuer{
 		VerificationKey:        b.Header.IssuerVK,
-		VrfVerificationKey:     b.Header.IssuerVrf,
+		VrfVerificationKey:     string(issuerVrf),
 		OperationalCertificate: opCert,
-		LeaderValue:            leaderValue}
+		LeaderValue:            leaderValue,
+	}
+
+	// Unfortunately, due to how v5 data is formatted on the wire and stored by Ogmigo,
+	// we have to use other data to determine the era. Because the protocol version can
+	// be determined before a fork, unlike the slot number, we use the protocol version.
+	// This will make it easier to add support for future forks before the fork occurs,
+	// while also supporting testnet and other networks that use the same versioning.
+	var era string
+	if majorVer <= 1 {
+		era = "byron"
+	} else if majorVer == 2 {
+		era = "shelley"
+	} else if majorVer == 3 {
+		era = "allegra"
+	} else if majorVer == 4 {
+		era = "mary"
+	} else if majorVer <= 6 {
+		era = "alonzo"
+	} else if majorVer == 7 {
+		era = "babbage"
+	} else {
+		era = "unknown"
+	}
+
 	b6 := chainsync.Block{
 		Type:         "praos",
-		Era:          "babbage", // TODO - Get from V5 entry - Not trivial as designed
+		Era:          era,
 		ID:           b.HeaderHash,
 		Ancestor:     b.Header.PrevHash,
-		Nonce:        fakeNonce,
+		Nonce:        nonce,
 		Height:       b.Header.BlockHeight,
 		Size:         chainsync.BlockSize{Bytes: int64(b.Header.BlockSize)},
 		Slot:         b.Header.Slot,
@@ -198,6 +369,14 @@ func (p PointStructV5) Point() PointV5 {
 	return PointV5{
 		pointType:   chainsync.PointTypeStruct,
 		pointStruct: &p,
+	}
+}
+
+func (p PointStructV5) ConvertToV6() chainsync.PointStruct {
+	return chainsync.PointStruct{
+		BlockNo: p.BlockNo,
+		ID:      p.Hash,
+		Slot:    p.Slot,
 	}
 }
 
@@ -354,9 +533,34 @@ type RollBackwardV5 struct {
 	Tip   TipV5   `json:"tip,omitempty"   dynamodbav:"tip,omitempty"`
 }
 
+type RollForwardBlockV5 struct {
+	Allegra *BlockV5    `json:"allegra,omitempty" dynamodbav:"allegra,omitempty"`
+	Alonzo  *BlockV5    `json:"alonzo,omitempty"  dynamodbav:"alonzo,omitempty"`
+	Babbage *BlockV5    `json:"babbage,omitempty" dynamodbav:"babbage,omitempty"`
+	Byron   *ByronBlock `json:"byron,omitempty"   dynamodbav:"byron,omitempty"`
+	Mary    *BlockV5    `json:"mary,omitempty"    dynamodbav:"mary,omitempty"`
+	Shelley *BlockV5    `json:"shelley,omitempty" dynamodbav:"shelley,omitempty"`
+}
+
+func (b RollForwardBlockV5) GetNonByronBlock() *BlockV5 {
+	if b.Shelley != nil {
+		return b.Shelley
+	} else if b.Allegra != nil {
+		return b.Allegra
+	} else if b.Mary != nil {
+		return b.Mary
+	} else if b.Alonzo != nil {
+		return b.Alonzo
+	} else if b.Babbage != nil {
+		return b.Babbage
+	} else {
+		return nil
+	}
+}
+
 type RollForwardV5 struct {
-	Block BlockV5 `json:"block,omitempty" dynamodbav:"block,omitempty"`
-	Tip   TipV5   `json:"tip,omitempty"   dynamodbav:"tip,omitempty"`
+	Block RollForwardBlockV5 `json:"block,omitempty" dynamodbav:"block,omitempty"`
+	Tip   TipV5              `json:"tip,omitempty"   dynamodbav:"tip,omitempty"`
 }
 
 type ResultNextBlockV5 struct {
