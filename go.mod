@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/nsf/jsondiff v0.0.0-20210926074059-1e845ec5d249
 	github.com/stretchr/testify v1.8.1
+	github.com/tj/assert v0.0.3
 	golang.org/x/sync v0.1.0
 	golang.org/x/text v0.7.0
 )

@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/shared"
 )
 
 type EraStart struct {
 	Time  EraSeconds `json:"time,omitempty"`
-	Slot  big.Int    `json:"slot,omit"`
-	Epoch big.Int    `json:"epoch,omit"`
+	Slot  big.Int    `json:"slot,omitempty"`
+	Epoch big.Int    `json:"epoch,omitempty"`
 }
 
 type EraSeconds struct {
@@ -25,7 +25,7 @@ type Utxo struct {
 	Transaction UtxoTxID        `json:"transaction"`
 	Index       uint32          `json:"index"`
 	Address     string          `json:"address"`
-	Value       Ada             `json:"value"`
+	Value       shared.Value    `json:"value"`
 	DatumHash   string          `json:"datumHash,omitempty"`
 	Datum       string          `json:"datum,omitempty"`
 	Script      json.RawMessage `json:"script,omitempty"`
@@ -33,8 +33,4 @@ type Utxo struct {
 
 type UtxoTxID struct {
 	ID string `json:"id"`
-}
-
-type Ada struct {
-	Ada chainsync.Lovelace `json:"ada"`
 }

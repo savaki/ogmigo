@@ -87,12 +87,17 @@ func (t TxV5) ConvertToV6() chainsync.Tx {
 	return tx
 }
 
+type Value struct {
+	Coins  num.Int
+	Assets map[string]num.Int
+}
+
 type TxBodyV5 struct {
 	Certificates            []json.RawMessage          `json:"certificates,omitempty"            dynamodbav:"certificates,omitempty"`
 	Collaterals             []chainsync.TxIn           `json:"collaterals,omitempty"             dynamodbav:"collaterals,omitempty"`
 	Fee                     num.Int                    `json:"fee,omitempty"                     dynamodbav:"fee,omitempty"`
 	Inputs                  []chainsync.TxIn           `json:"inputs,omitempty"                  dynamodbav:"inputs,omitempty"`
-	Mint                    *chainsync.Value           `json:"mint,omitempty"                    dynamodbav:"mint,omitempty"`
+	Mint                    *Value                     `json:"mint,omitempty"                    dynamodbav:"mint,omitempty"`
 	Network                 json.RawMessage            `json:"network,omitempty"                 dynamodbav:"network,omitempty"`
 	Outputs                 chainsync.TxOuts           `json:"outputs,omitempty"                 dynamodbav:"outputs,omitempty"`
 	RequiredExtraSignatures []string                   `json:"requiredExtraSignatures,omitempty" dynamodbav:"requiredExtraSignatures,omitempty"`

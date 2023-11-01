@@ -29,6 +29,7 @@ import (
 	"golang.org/x/text/message"
 
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
+	"github.com/tj/assert"
 )
 
 func TestClient_ChainSync(t *testing.T) {
@@ -128,10 +129,8 @@ func Test_getInit(t *testing.T) {
 			t.Fatalf("got %v; want nil", err)
 		}
 
-		want := `{"args":{"points":[{"blockNo":123,"hash":"hash","slot":456}]},"methodname":"FindIntersect","mirror":{"step":"INIT"},"servicename":"ogmios","type":"jsonwsp/request","version":"1.0"}`
-		if got := string(points); got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
+		want := `{"id":{"step":"INIT"},"jsonrpc":"2.0","method":"findIntersection","params":{"points":[{"blockNo":123,"id":"hash","slot":456}]}}`
+		assert.EqualValues(t, string(points), want)
 	})
 
 	t.Run("from points", func(t *testing.T) {
@@ -141,9 +140,7 @@ func Test_getInit(t *testing.T) {
 			t.Fatalf("got %v; want nil", err)
 		}
 
-		want := `{"args":{"points":[{"blockNo":123,"hash":"hash","slot":456}]},"methodname":"FindIntersect","mirror":{"step":"INIT"},"servicename":"ogmios","type":"jsonwsp/request","version":"1.0"}`
-		if got := string(points); got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
+		want := `{"id":{"step":"INIT"},"jsonrpc":"2.0","method":"findIntersection","params":{"points":[{"blockNo":123,"id":"hash","slot":456}]}}`
+		assert.EqualValues(t, string(points), want)
 	})
 }

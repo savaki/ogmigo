@@ -21,6 +21,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/tj/assert"
 )
 
 func TestClient_SubmitTx(t *testing.T) {
@@ -38,10 +40,8 @@ func TestClient_SubmitTx(t *testing.T) {
 }
 
 func TestSubmitTxResult(t *testing.T) {
-	err := filepath.Walk("ext/ogmios/server/test/vectors/TxSubmission", testSubmitTxResult(t))
-	if err != nil {
-		t.Fatalf("got %v; want nil", err)
-	}
+	err := filepath.Walk("ext/ogmios/server/test/vectors/SubmitTransactionResponse", testSubmitTxResult(t))
+	assert.Nil(t, err)
 }
 
 func testSubmitTxResult(t *testing.T) filepath.WalkFunc {
