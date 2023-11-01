@@ -2,7 +2,7 @@ package statequery
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync/num"
 	"math/big"
 )
 
@@ -34,22 +34,44 @@ type UtxoTxID struct {
 	ID string `json:"id"`
 }
 
-type Value struct {
-	Ada    int64
-	Assets map[string]map[string]int64
+type Value map[string]map[string]num.Int
+
+type AssetId struct {
+	Policy string
+	Token  string
 }
 
-func (v *Value) UnmarshalJSON(data []byte) error {
-	var m map[string]map[string]int64
-	if err := json.Unmarshal(data, &m); err != nil {
-		return err
+const AdaPolicy = "ada"
+const AdaName = "lovelace"
+
+func AdaAssetId() AssetId {
+	return AssetId{
+		Policy: AdaPolicy,
+		Token:  AdaName,
 	}
-	adaAmt, ok := m["ada"]["lovelace"]
-	if !ok {
-		return fmt.Errorf("statequery: Value.UnmarshalJSON: key 'ada' missing")
+}
+
+func (v Value) AdaLovelace() num.Int {
+	return v.AssetAmount(AdaAssetId())
+}
+
+func (v Value) AssetAmount(asset AssetId) num.Int {
+	if nested, ok := v[asset.Policy]; ok {
+		return nested[asset.Token]
 	}
-	delete(m, "ada")
-	v.Ada = adaAmt
-	v.Assets = m
-	return nil
+	return num.Int64(0)
+}
+
+func (v Value) Assets() map[string]map[string]num.Int {
+	policies := make(map[string]map[string]num.Int, 0)
+	for policy, tokenMap := range v {
+		if policy == AdaPolicy {
+			continue
+		}
+		policies[policy] = make(map[string]num.Int, 0)
+		for token, quantity := range tokenMap {
+			policies[policy][token] = quantity
+		}
+	}
+	return policies
 }
