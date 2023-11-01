@@ -20,10 +20,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -31,63 +29,13 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync/num"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/shared"
 )
 
 var (
 	encOptions = cbor.CoreDetEncOptions()
 	bNil       = []byte("nil")
 )
-
-type AssetID string
-
-func (a AssetID) HasPolicyID(s string) bool {
-	return len(s) == 56 && strings.HasPrefix(string(a), s)
-}
-
-func (a AssetID) HasAssetID(re *regexp.Regexp) bool {
-	return re.MatchString(string(a))
-}
-
-func (a AssetID) IsZero() bool {
-	return a == ""
-}
-
-func (a AssetID) MatchAssetName(re *regexp.Regexp) ([]string, bool) {
-	if assetName := a.AssetName(); len(assetName) > 0 {
-		ss := re.FindStringSubmatch(assetName)
-		return ss, len(ss) > 0
-	}
-	return nil, false
-}
-
-func (a AssetID) String() string {
-	return string(a)
-}
-
-func (a AssetID) AssetName() string {
-	s := string(a)
-	if index := strings.Index(s, "."); index > 0 {
-		return s[index+1:]
-	}
-	return ""
-}
-
-func (a AssetID) AssetNameUTF8() (string, bool) {
-	if data, err := hex.DecodeString(a.AssetName()); err == nil {
-		if utf8.Valid(data) {
-			return string(data), true
-		}
-	}
-	return "", false
-}
-
-func (a AssetID) PolicyID() string {
-	s := string(a)
-	if index := strings.Index(s, "."); index > 0 {
-		return s[:index]
-	}
-	return s // Assets with empty-string name come back as just the policy ID
-}
 
 // All blocks except Byron-era blocks.
 type Block struct {
@@ -425,7 +373,7 @@ const RollBackwardString = "backward"
 func (r *ResponsePraos) UnmarshalJSON(b []byte) error {
 	var m struct {
 		JsonRpc string          `json:"jsonrpc"`
-		Method  string          `json:"method" json:"methodname"`
+		Method  string          `json:"method"`
 		ID      json.RawMessage `json:"ID"`
 		Result  json.RawMessage `json:"result"`
 		Error   json.RawMessage `json:"error"`
@@ -496,7 +444,7 @@ type Tx struct {
 	Withdrawals              map[string]Lovelace `json:"withdrawals,omitempty"              dynamodbav:"withdrawals,omitempty"`
 	Fee                      Lovelace            `json:"fee,omitempty"                      dynamodbav:"fee,omitempty"`
 	ValidityInterval         ValidityInterval    `json:"validityInterval"                   dynamodbav:"validityInterval,omitempty"`
-	Mint                     DoubleNestedInteger `json:"mint,omitempty"                     dynamodbav:"mint,omitempty"`
+	Mint                     shared.Value        `json:"mint,omitempty"                     dynamodbav:"mint,omitempty"`
 	Network                  json.RawMessage     `json:"network,omitempty"                  dynamodbav:"network,omitempty"`
 	ScriptIntegrityHash      string              `json:"scriptIntegrityHash,omitempty"      dynamodbav:"scriptIntegrityHash,omitempty"`
 	RequiredExtraSignatories []string            `json:"requiredExtraSignatories,omitempty" dynamodbav:"requiredExtraSignatories,omitempty"`
@@ -561,22 +509,11 @@ type TxOut struct {
 	Address   string          `json:"address,omitempty"   dynamodbav:"address,omitempty"`
 	Datum     string          `json:"datum,omitempty"     dynamodbav:"datum,omitempty"`
 	DatumHash string          `json:"datumHash,omitempty" dynamodbav:"datumHash,omitempty"`
-	Value     Value           `json:"value,omitempty"     dynamodbav:"value,omitempty"`
+	Value     shared.Value    `json:"value,omitempty"     dynamodbav:"value,omitempty"`
 	Script    json.RawMessage `json:"script,omitempty"    dynamodbav:"script,omitempty"`
 }
 
 type TxOuts []TxOut
-
-func (tt TxOuts) FindByAssetID(assetID AssetID) (TxOut, bool) {
-	for _, t := range tt {
-		for gotAssetID := range t.Value.Assets {
-			if gotAssetID == assetID {
-				return t, true
-			}
-		}
-	}
-	return TxOut{}, false
-}
 
 type Datums map[string]string
 
@@ -659,45 +596,4 @@ type Witness struct {
 type ValidityInterval struct {
 	InvalidBefore    uint64 `json:"invalidBefore,omitempty"    dynamodbav:"invalidBefore,omitempty"`
 	InvalidHereafter uint64 `json:"invalidHereafter,omitempty" dynamodbav:"invalidHereafter,omitempty"`
-}
-
-type Value struct {
-	Coins  num.Int             `json:"coins,omitempty"  dynamodbav:"coins,omitempty"`
-	Assets map[AssetID]num.Int `json:"assets,omitempty" dynamodbav:"assets,omitempty"`
-}
-
-func Add(a Value, b Value) Value {
-	var result Value
-	result.Coins = a.Coins.Add(b.Coins)
-	result.Assets = map[AssetID]num.Int{}
-	for assetId, amt := range a.Assets {
-		result.Assets[assetId] = amt
-	}
-	for assetId, amt := range b.Assets {
-		result.Assets[assetId] = result.Assets[assetId].Add(amt)
-	}
-	return result
-}
-func Subtract(a Value, b Value) Value {
-	var result Value
-	result.Coins = a.Coins.Sub(b.Coins)
-	result.Assets = map[AssetID]num.Int{}
-	for assetId, amt := range a.Assets {
-		result.Assets[assetId] = amt
-	}
-	for assetId, amt := range b.Assets {
-		result.Assets[assetId] = result.Assets[assetId].Sub(amt)
-	}
-	return result
-}
-func Enough(have Value, want Value) (bool, error) {
-	if have.Coins.Int64() < want.Coins.Int64() {
-		return false, fmt.Errorf("not enough ADA to meet demand")
-	}
-	for asset, amt := range want.Assets {
-		if have.Assets[asset].Int64() < amt.Int64() {
-			return false, fmt.Errorf("not enough %v to meet demand", asset)
-		}
-	}
-	return true, nil
 }
