@@ -306,6 +306,10 @@ func (b BlockV5) ConvertToV6() chainsync.Block {
 		}
 		count := b.Header.OpCert["count"]
 		kesPd := b.Header.OpCert["kesPeriod"]
+
+		// Yes, the uint64 casts are ugly. JSON covers floats but not ints. Unmarshalling
+		// into interface{} creates float64. If we treat interface{} as uint64, the code
+		// compiles but crashes at runtime. So, we cast float64 to uint64.
 		opCert = chainsync.OpCert{
 			Count: uint64(count.(float64)),
 			Kes:   chainsync.Kes{Period: uint64(kesPd.(float64)), VerificationKey: string(vk)},
