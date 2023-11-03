@@ -15,12 +15,10 @@
 package compatibility
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
-	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync/num"
 	v5 "github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync/v5"
 )
 
@@ -66,7 +64,7 @@ func (c CompatibleResultFindIntersection) String() string {
 	return fmt.Sprintf("intersection=[%v] tip=[%v] error=[%v] id=[%v]", c.Intersection, c.Tip, c.Error, c.ID)
 }
 
-// Support findIntersect (v6) / FindIntersection (v5) universally.
+// Support nextBlock (v6) / RequestNext (v5) universally.
 type CompatibleResultNextBlock chainsync.ResultNextBlockPraos
 
 func (c *CompatibleResultNextBlock) UnmarshalJSON(data []byte) error {
@@ -84,7 +82,11 @@ func (c *CompatibleResultNextBlock) UnmarshalJSON(data []byte) error {
 		return err
 	} else if r5.RollForward != nil {
 		tip := r5.RollForward.Tip.ConvertToV6()
-		block := r5.RollForward.Block.ConvertToV6()
+		rollForwardBlock := r5.RollForward.Block.GetNonByronBlock()
+		if rollForwardBlock == nil {
+			return error(fmt.Errorf("rollForwardBlock is nil"))
+		}
+		block := rollForwardBlock.ConvertToV6()
 		c.Direction = chainsync.RollForwardString
 		c.Tip = &tip
 		c.Block = &block
@@ -108,7 +110,7 @@ func (c CompatibleResultNextBlock) String() string {
 	return fmt.Sprintf("direction=[%v] tip=[%v] block=[%v] point=[%v]", c.Direction, c.Tip, c.Block, c.Point)
 }
 
-// Support findIntersect (v6) / FindIntersection (v5) universally.
+// Frontend for converting v5 JSON responses to v6.
 type CompatibleResponsePraos chainsync.ResponsePraos
 
 func (c *CompatibleResponsePraos) UnmarshalJSON(data []byte) error {
@@ -127,11 +129,7 @@ func (c *CompatibleResponsePraos) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// var p Point
-	// var t Tip
-	// var e ResultError
-
-	// All we really care about is the result.
+	// All we really care about is the result, not the metadata.
 	if r5.Result.IntersectionFound != nil {
 		c.Method = chainsync.FindIntersectionMethod
 
@@ -153,82 +151,18 @@ func (c *CompatibleResponsePraos) UnmarshalJSON(data []byte) error {
 	} else if r5.Result.RollForward != nil {
 		c.Method = chainsync.NextBlockMethod
 
+		rollForwardBlock := r5.Result.RollForward.Block.GetNonByronBlock()
+		if rollForwardBlock == nil {
+			return error(fmt.Errorf("rollForwardBlock is nil"))
+		}
+		block := rollForwardBlock.ConvertToV6()
+
 		t := r5.Result.RollForward.Tip.ConvertToV6()
-		txArray := make([]chainsync.Tx, len(r5.Result.RollForward.Block.Body))
-		for _, t := range r5.Result.RollForward.Block.Body {
-			withdrawals := make(map[string]chainsync.Lovelace)
-			for txid, amt := range t.Body.Withdrawals {
-				withdrawals[txid] = chainsync.Lovelace{Lovelace: num.Int64(amt), Extras: nil}
-			}
-
-			tx := chainsync.Tx{
-				ID:                       t.ID,
-				Spends:                   t.InputSource,
-				Inputs:                   t.Body.Inputs,
-				References:               t.Body.References,
-				Collaterals:              t.Body.Collaterals,
-				TotalCollateral:          &chainsync.Lovelace{Lovelace: num.Int64(*t.Body.TotalCollateral)},
-				CollateralReturn:         (*chainsync.TxOut)(t.Body.CollateralReturn),
-				Outputs:                  t.Body.Outputs,
-				Certificates:             t.Body.Certificates,
-				Withdrawals:              withdrawals,
-				Fee:                      chainsync.Lovelace{Lovelace: t.Body.Fee},
-				ValidityInterval:         t.Body.ValidityInterval,
-				Mint:                     nil, // TODO - Differences appear to be too much to handle.
-				Network:                  t.Body.Network,
-				ScriptIntegrityHash:      t.Body.ScriptIntegrityHash,
-				RequiredExtraSignatories: t.Body.RequiredExtraSignatures,
-				RequiredExtraScripts:     nil,
-				Proposals:                t.Body.Update,
-				Votes:                    nil,
-				Metadata:                 t.Metadata,
-				Signatories:              t.Witness.Bootstrap,
-				Scripts:                  t.Witness.Scripts,
-				Datums:                   t.Witness.Datums,
-				Redeemers:                t.Witness.Redeemers,
-				CBOR:                     t.Raw,
-			}
-			txArray = append(txArray, tx)
-		}
-
-		fakeNonce := chainsync.Nonce{Output: "fake", Proof: "fake"}
-		protocolVersion := chainsync.ProtocolVersion{
-			Major: uint32(r5.Result.RollForward.Block.Header.ProtocolVersion["Major"]),
-			Minor: uint32(r5.Result.RollForward.Block.Header.ProtocolVersion["Minor"]),
-			Patch: uint32(r5.Result.RollForward.Block.Header.ProtocolVersion["Patch"]),
-		}
-		protocol := chainsync.Protocol{Version: protocolVersion}
-		leaderValue := chainsync.LeaderValue{Proof: "fake", Output: "fake"}
-		var opCert chainsync.OpCert
-		if r5.Result.RollForward.Block.Header.OpCert != nil {
-			var vk []byte
-			if r5.Result.RollForward.Block.Header.OpCert["hotVk"].([]byte) != nil {
-				vk, _ = base64.StdEncoding.DecodeString(r5.Result.RollForward.Block.Header.OpCert["hotVk"].(string))
-			}
-			opCert = chainsync.OpCert{
-				Count: r5.Result.RollForward.Block.Header.OpCert["count"].(uint64),
-				Kes:   chainsync.Kes{Period: r5.Result.RollForward.Block.Header.OpCert["kesPeriod"].(uint64), VerificationKey: string(vk)},
-			}
-		}
-		issuer := chainsync.BlockIssuer{VerificationKey: r5.Result.RollForward.Block.Header.IssuerVK, VrfVerificationKey: r5.Result.RollForward.Block.Header.IssuerVrf, OperationalCertificate: opCert, LeaderValue: leaderValue}
-		b := chainsync.Block{
-			Type:         "praos",
-			Era:          "babbage", // TODO - Get from V5 entry - Not trivial as designed
-			ID:           r5.Result.RollForward.Block.HeaderHash,
-			Ancestor:     r5.Result.RollForward.Block.Header.PrevHash,
-			Nonce:        fakeNonce,
-			Height:       r5.Result.RollForward.Block.Header.BlockHeight,
-			Size:         chainsync.BlockSize{Bytes: int64(r5.Result.RollForward.Block.Header.BlockSize)},
-			Slot:         r5.Result.RollForward.Block.Header.Slot,
-			Transactions: txArray,
-			Protocol:     protocol,
-			Issuer:       issuer,
-		}
 
 		var nextBlock CompatibleResultNextBlock
 		nextBlock.Direction = chainsync.RollForwardString
 		nextBlock.Tip = &t
-		nextBlock.Block = &b
+		nextBlock.Block = &block
 		c.Result = &nextBlock
 	} else if r5.Result.RollBackward != nil {
 		c.Method = chainsync.NextBlockMethod
@@ -261,12 +195,4 @@ func (r CompatibleResponsePraos) MustNextBlockResult() CompatibleResultNextBlock
 		panic(fmt.Errorf("must only use *Must* methods after switching on the nextBlock method; called on %v", r.Method))
 	}
 	return CompatibleResultNextBlock(r.Result.(chainsync.ResultNextBlockPraos))
-}
-
-func ConvertPointStructV5ToV6(p v5.PointStructV5) chainsync.PointStruct {
-	return chainsync.PointStruct{
-		BlockNo: p.BlockNo,
-		ID:      p.Hash,
-		Slot:    p.Slot,
-	}
 }

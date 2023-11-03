@@ -43,7 +43,7 @@ type Block struct {
 	Era          string      `json:"era,omitempty"`
 	ID           string      `json:"id,omitempty"`
 	Ancestor     string      `json:"ancestor,omitempty"`
-	Nonce        Nonce       `json:"nonce,omitempty"`
+	Nonce        *Nonce      `json:"nonce,omitempty"`
 	Height       uint64      `json:"height,omitempty"`
 	Size         BlockSize   `json:"size,omitempty"`
 	Slot         uint64      `json:"slot,omitempty"`
@@ -58,7 +58,7 @@ type Nonce struct {
 }
 
 type BlockSize struct {
-	Bytes int64
+	Bytes int64 `json:"bytes,omitempty"  dynamodbav:"bytes,omitempty"`
 }
 
 type Protocol struct {
@@ -66,10 +66,10 @@ type Protocol struct {
 }
 
 type BlockIssuer struct {
-	VerificationKey        string      `json:"verificationKey,omitempty"`
-	VrfVerificationKey     string      `json:"vrfVerificationKey,omitempty"`
-	OperationalCertificate OpCert      `json:"operationalCertificate,omitempty"`
-	LeaderValue            LeaderValue `json:"leaderValue,omitempty"`
+	VerificationKey        string       `json:"verificationKey,omitempty"`
+	VrfVerificationKey     string       `json:"vrfVerificationKey,omitempty"`
+	OperationalCertificate OpCert       `json:"operationalCertificate,omitempty"`
+	LeaderValue            *LeaderValue `json:"leaderValue,omitempty"`
 }
 
 type OpCert struct {
@@ -83,8 +83,8 @@ type Kes struct {
 }
 
 type LeaderValue struct {
-	Proof  string `json:"proof,omitempty"`
 	Output string `json:"output,omitempty"`
+	Proof  string `json:"proof,omitempty"`
 }
 
 type PointType int
@@ -445,7 +445,7 @@ type Tx struct {
 	Fee                      Lovelace            `json:"fee,omitempty"                      dynamodbav:"fee,omitempty"`
 	ValidityInterval         ValidityInterval    `json:"validityInterval"                   dynamodbav:"validityInterval,omitempty"`
 	Mint                     shared.Value        `json:"mint,omitempty"                     dynamodbav:"mint,omitempty"`
-	Network                  json.RawMessage     `json:"network,omitempty"                  dynamodbav:"network,omitempty"`
+	Network                  string              `json:"network,omitempty"                  dynamodbav:"network,omitempty"`
 	ScriptIntegrityHash      string              `json:"scriptIntegrityHash,omitempty"      dynamodbav:"scriptIntegrityHash,omitempty"`
 	RequiredExtraSignatories []string            `json:"requiredExtraSignatories,omitempty" dynamodbav:"requiredExtraSignatories,omitempty"`
 	RequiredExtraScripts     []string            `json:"requiredExtraScripts,omitempty"     dynamodbav:"requiredExtraScripts,omitempty"`
@@ -463,7 +463,6 @@ type DoubleNestedInteger map[string]map[string]num.Int
 
 type Lovelace struct {
 	Lovelace num.Int `json:"lovelace,omitempty"  dynamodbav:"lovelace,omitempty"`
-	Extras   []DoubleNestedInteger
 }
 
 type TxID string
@@ -493,16 +492,22 @@ func (t TxID) TxHash() string {
 }
 
 type TxIn struct {
-	TxHash string `json:"txId"  dynamodbav:"txId"`
-	Index  int    `json:"index" dynamodbav:"index"`
+	Transaction TxInID `json:"transaction"  dynamodbav:"transaction"`
+	Index       int    `json:"index" dynamodbav:"index"`
+}
+
+type TxIns []TxIn
+
+type TxInID struct {
+	ID string `json:"id"  dynamodbav:"id"`
 }
 
 func (t TxIn) String() string {
-	return t.TxHash + "#" + strconv.Itoa(t.Index)
+	return t.Transaction.ID + "#" + strconv.Itoa(t.Index)
 }
 
 func (t TxIn) TxID() TxID {
-	return NewTxID(t.TxHash, t.Index)
+	return NewTxID(t.Transaction.ID, t.Index)
 }
 
 type TxOut struct {
@@ -594,6 +599,6 @@ type Witness struct {
 }
 
 type ValidityInterval struct {
-	InvalidBefore    uint64 `json:"invalidBefore,omitempty"    dynamodbav:"invalidBefore,omitempty"`
-	InvalidHereafter uint64 `json:"invalidHereafter,omitempty" dynamodbav:"invalidHereafter,omitempty"`
+	InvalidBefore uint64 `json:"invalidBefore,omitempty" dynamodbav:"invalidBefore,omitempty"`
+	InvalidAfter  uint64 `json:"invalidAfter,omitempty"  dynamodbav:"invalidAfter,omitempty"`
 }
