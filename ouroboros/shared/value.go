@@ -67,7 +67,7 @@ func Enough(have Value, want Value) (bool, error) {
 }
 
 func (v Value) AdaLovelace() num.Int {
-	return v.AssetAmount(AdaAsset)
+	return v.AssetAmount(AdaAssetID)
 }
 
 func (v Value) AssetAmount(asset AssetID) num.Int {
