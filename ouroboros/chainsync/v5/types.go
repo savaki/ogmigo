@@ -33,6 +33,23 @@ var (
 	bNil = []byte("nil")
 )
 
+// Unfortunately, due to how v5 data is formatted on the wire and stored by Ogmigo,
+// we have to use other data to determine the era. Because the protocol version can
+// be determined before a fork, unlike the slot number, we use the protocol version.
+// This will make it easier to add support for future forks before the fork occurs,
+// while also supporting testnet and other networks that use the same versioning.
+var majorEras = map[uint32]string{
+	0: "byron",
+	1: "byron",
+	2: "shelley",
+	3: "allegra",
+	4: "mary",
+	5: "mary",
+	6: "alonzo",
+	7: "babbage",
+	8: "conway",
+}
+
 type IntersectionFound struct {
 	Point PointV5
 	Tip   TipV5
@@ -54,7 +71,7 @@ type TxV5 struct {
 }
 
 func (t TxV5) ConvertToV6() chainsync.Tx {
-	withdrawals := make(map[string]chainsync.Lovelace)
+	withdrawals := map[string]chainsync.Lovelace{}
 	for txid, amt := range t.Body.Withdrawals {
 		withdrawals[txid] = chainsync.Lovelace{Lovelace: num.Int64(amt)}
 	}
@@ -62,14 +79,10 @@ func (t TxV5) ConvertToV6() chainsync.Tx {
 	var tc *chainsync.Lovelace
 	if t.Body.TotalCollateral != nil {
 		tc = &chainsync.Lovelace{Lovelace: num.Int64(*t.Body.TotalCollateral)}
-	} else {
-		tc = nil
 	}
 	var cr *chainsync.TxOut
 	if t.Body.CollateralReturn != nil {
 		*cr = t.Body.CollateralReturn.ConvertToV6()
-	} else {
-		cr = nil
 	}
 
 	cbor, _ := base64.StdEncoding.DecodeString(t.Raw)
@@ -88,7 +101,7 @@ func (t TxV5) ConvertToV6() chainsync.Tx {
 		Withdrawals:              withdrawals,
 		Fee:                      chainsync.Lovelace{Lovelace: t.Body.Fee},
 		ValidityInterval:         t.Body.ValidityInterval.ConvertToV6(),
-		Mint:                     t.Body.Mint.ConvertToV6(false),
+		Mint:                     t.Body.Mint.ConvertToV6(),
 		Network:                  string(n),
 		ScriptIntegrityHash:      t.Body.ScriptIntegrityHash,
 		RequiredExtraSignatories: t.Body.RequiredExtraSignatures,
@@ -162,7 +175,7 @@ func (t TxOutV5) ConvertToV6() chainsync.TxOut {
 		Address:   t.Address,
 		Datum:     t.Datum,
 		DatumHash: t.DatumHash,
-		Value:     t.Value.ConvertToV6(true),
+		Value:     t.Value.ConvertToV6(),
 		Script:    t.Script,
 	}
 }
@@ -205,30 +218,29 @@ type ValueV5 struct {
 	Assets map[shared.AssetID]num.Int `json:"assets,omitempty" dynamodbav:"assets,omitempty"`
 }
 
-// There's at least one special case in v6 (Mint) where the v5 "Coins" field doesn't
-// appear to be used. Give callers the option to skip it.
-func (v ValueV5) ConvertToV6(includeCoins bool) shared.Value {
-	assets := make(shared.Value)
-	adaMap := make(map[string]num.Int)
-	if includeCoins {
-		adaMap[shared.AdaAsset] = v.Coins
-		assets[shared.AdaPolicy] = adaMap
+func (v ValueV5) ConvertToV6() shared.Value {
+	assets := shared.Value{}
+	if v.Coins.Uint64() != 0 {
+		assets[shared.AdaPolicy] = map[string]num.Int{
+			shared.AdaAsset: v.Coins,
+		}
 	}
-	for policy, assetNum := range v.Assets {
-		policySplit := strings.Split(string(policy), ".")
-		policyID := ""
-		assetName := ""
+	for assetId, assetNum := range v.Assets {
+		policySplit := strings.Split(string(assetId), ".")
+		var (
+			policyId  string
+			assetName string
+		)
 		if len(policySplit) == 2 {
-			policyID = policySplit[0]
+			policyId = policySplit[0]
 			assetName = policySplit[1]
 		} else {
-			policyID = policySplit[0]
+			policyId = policySplit[0]
 		}
-		if assets[policyID] == nil {
-			assetMap := make(map[string]num.Int)
-			assets[policyID] = assetMap
+		if assets[policyId] == nil {
+			assets[policyId] = map[string]num.Int{}
 		}
-		assets[policyID][assetName] = assetNum
+		assets[policyId][assetName] = assetNum
 	}
 
 	return assets
@@ -270,13 +282,13 @@ func (b BlockV5) ConvertToV6() chainsync.Block {
 		txArray = append(txArray, t.ConvertToV6())
 	}
 
+	// The v5 spec indicates that both nonce entries are optional. We'll create a v6
+	// entry (which also indicates both are optional) if either is present.
 	nonceOutput := b.Header.Nonce["output"]
 	nonceProof := b.Header.Nonce["output"]
 	var nonce *chainsync.Nonce
-	if nonceOutput != "" && nonceProof != "" {
+	if nonceOutput != "" || nonceProof != "" {
 		*nonce = chainsync.Nonce{Output: nonceOutput, Proof: nonceProof}
-	} else {
-		nonce = nil
 	}
 	majorVer := uint32(b.Header.ProtocolVersion["major"])
 	protocolVersion := chainsync.ProtocolVersion{
@@ -308,8 +320,6 @@ func (b BlockV5) ConvertToV6() chainsync.Block {
 			Output: string(decodedOutput),
 			Proof:  string(decodedProof),
 		}
-	} else {
-		leaderValue = nil
 	}
 
 	issuerVrf, _ := base64.StdEncoding.DecodeString(b.Header.IssuerVrf)
@@ -320,31 +330,9 @@ func (b BlockV5) ConvertToV6() chainsync.Block {
 		LeaderValue:            leaderValue,
 	}
 
-	// Unfortunately, due to how v5 data is formatted on the wire and stored by Ogmigo,
-	// we have to use other data to determine the era. Because the protocol version can
-	// be determined before a fork, unlike the slot number, we use the protocol version.
-	// This will make it easier to add support for future forks before the fork occurs,
-	// while also supporting testnet and other networks that use the same versioning.
-	var era string
-	if majorVer <= 1 {
-		era = "byron"
-	} else if majorVer == 2 {
-		era = "shelley"
-	} else if majorVer == 3 {
-		era = "allegra"
-	} else if majorVer == 4 {
-		era = "mary"
-	} else if majorVer <= 6 {
-		era = "alonzo"
-	} else if majorVer == 7 {
-		era = "babbage"
-	} else {
-		era = "unknown"
-	}
-
 	b6 := chainsync.Block{
 		Type:         "praos",
-		Era:          era,
+		Era:          majorEras[majorVer],
 		ID:           b.HeaderHash,
 		Ancestor:     b.Header.PrevHash,
 		Nonce:        nonce,
