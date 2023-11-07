@@ -18,10 +18,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/shared"
 )
 
 func TestClient_ChainTip(t *testing.T) {
@@ -102,21 +104,21 @@ func TestClient_CurrentProtocolParameters(t *testing.T) {
 }
 
 func TestClient_GenesisConfig(t *testing.T) {
-       endpoint := os.Getenv("OGMIOS")
-       if endpoint == "" {
-               t.SkipNow()
-       }
+	endpoint := os.Getenv("OGMIOS")
+	if endpoint == "" {
+		t.SkipNow()
+	}
 
-       ctx := context.Background()
-       client := New(WithEndpoint(endpoint), WithLogger(DefaultLogger))
-       params, err := client.GenesisConfig(ctx, "shelley")
-       if err != nil {
-               t.Fatalf("got %#v; want nil", err)
-       }
+	ctx := context.Background()
+	client := New(WithEndpoint(endpoint), WithLogger(DefaultLogger))
+	params, err := client.GenesisConfig(ctx, shared.ShelleyEra)
+	if err != nil {
+		t.Fatalf("got %#v; want nil", err)
+	}
 
-       encoder := json.NewEncoder(os.Stdout)
-       encoder.SetIndent("", "  ")
-       _ = encoder.Encode(params)
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	_ = encoder.Encode(params)
 }
 
 func TestClient_EraStart(t *testing.T) {

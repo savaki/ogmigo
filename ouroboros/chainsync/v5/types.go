@@ -33,23 +33,6 @@ var (
 	bNil = []byte("nil")
 )
 
-// Unfortunately, due to how v5 data is formatted on the wire and stored by Ogmigo,
-// we have to use other data to determine the era. Because the protocol version can
-// be determined before a fork, unlike the slot number, we use the protocol version.
-// This will make it easier to add support for future forks before the fork occurs,
-// while also supporting testnet and other networks that use the same versioning.
-var majorEras = map[uint32]string{
-	0: "byron",
-	1: "byron",
-	2: "shelley",
-	3: "allegra",
-	4: "mary",
-	5: "mary",
-	6: "alonzo",
-	7: "babbage",
-	8: "conway",
-}
-
 type IntersectionFound struct {
 	Point PointV5
 	Tip   TipV5
@@ -334,9 +317,14 @@ func (b BlockV5) ConvertToV6() chainsync.Block {
 		LeaderValue:            leaderValue,
 	}
 
+	// Unfortunately, due to how v5 data is formatted on the wire and stored by Ogmigo,
+	// we have to use other data to determine the era. Because the protocol version can
+	// be determined before a fork, unlike the slot number, we use the protocol version.
+	// This will make it easier to add support for future forks before the fork occurs,
+	// while also supporting testnet and other networks that use the same versioning.
 	b6 := chainsync.Block{
 		Type:         "praos",
-		Era:          majorEras[majorVer],
+		Era:          shared.MajorEras[majorVer],
 		ID:           b.HeaderHash,
 		Ancestor:     b.Header.PrevHash,
 		Nonce:        nonce,
