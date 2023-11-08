@@ -67,28 +67,13 @@ func Enough(have Value, want Value) (bool, error) {
 	return true, nil
 }
 
-// Maps to Coins in v5 Value struct.
-func NewValueAda(coins num.Int) Value {
-	value := Value{}
-	value.AddAsset(AdaAssetID, coins)
-	return value
-}
-
-func NewValueAsset(asset AssetID, coins num.Int) Value {
-	value := Value{}
-	value.AddAsset(asset, coins)
-	return value
-}
-
-func (v Value) AddAda(coins num.Int) {
-	v.AddAsset(AdaAssetID, coins)
-}
-
-func (v Value) AddAsset(asset AssetID, coins num.Int) {
-	if _, ok := v[asset.PolicyID()]; !ok {
-		v[asset.PolicyID()] = map[string]num.Int{}
+func (v Value) AddAsset(coins ...Coin) {
+	for _, coin := range coins {
+		if _, ok := v[coin.assetId.PolicyID()]; !ok {
+			v[coin.assetId.PolicyID()] = map[string]num.Int{}
+		}
+		v[coin.assetId.PolicyID()][coin.assetId.AssetName()] = coin.amount
 	}
-	v[asset.PolicyID()][asset.AssetName()] = coins
 }
 
 func (v Value) AdaLovelace() num.Int {
@@ -114,4 +99,15 @@ func (v Value) AssetsExceptAda() Value {
 		}
 	}
 	return policies
+}
+
+type Coin struct {
+	assetId AssetID
+	amount  num.Int
+}
+
+func ValueFromCoins(coins ...Coin) Value {
+	var value Value
+	value.AddAsset(coins...)
+	return value
 }
