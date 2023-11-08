@@ -10,6 +10,7 @@ import (
 
 type AssetID string
 
+// AdaAssetID maps to Coins in the v5 Value struct.
 const (
 	AdaPolicy        = "ada"
 	AdaAsset         = "lovelace"
