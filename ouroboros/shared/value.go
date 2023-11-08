@@ -29,6 +29,7 @@ func Add(a Value, b Value) Value {
 
 	return result
 }
+
 func Subtract(a Value, b Value) Value {
 	result := Value{}
 	for policyId, assets := range a {
@@ -64,6 +65,30 @@ func Enough(have Value, want Value) (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+// Maps to Coins in v5 Value struct.
+func NewValueAda(coins num.Int) Value {
+	value := Value{}
+	value.AddAsset(AdaAssetID, coins)
+	return value
+}
+
+func NewValueAsset(asset AssetID, coins num.Int) Value {
+	value := Value{}
+	value.AddAsset(asset, coins)
+	return value
+}
+
+func (v Value) AddAda(coins num.Int) {
+	v.AddAsset(AdaAssetID, coins)
+}
+
+func (v Value) AddAsset(asset AssetID, coins num.Int) {
+	if _, ok := v[asset.PolicyID()]; !ok {
+		v[asset.PolicyID()] = map[string]num.Int{}
+	}
+	v[asset.PolicyID()][asset.AssetName()] = coins
 }
 
 func (v Value) AdaLovelace() num.Int {
