@@ -72,7 +72,7 @@ func (v Value) AddAsset(coins ...Coin) {
 		if _, ok := v[coin.assetId.PolicyID()]; !ok {
 			v[coin.assetId.PolicyID()] = map[string]num.Int{}
 		}
-		v[coin.assetId.PolicyID()][coin.assetId.AssetName()] = coin.amount
+		v[coin.assetId.PolicyID()][coin.assetId.AssetName()] = v[coin.assetId.PolicyID()][coin.assetId.AssetName()].Add(coin.amount)
 	}
 }
 
