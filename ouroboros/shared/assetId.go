@@ -8,12 +8,14 @@ import (
 	"unicode/utf8"
 )
 
-const AdaPolicy = "ada"
-const AdaAsset = "lovelace"
-
 type AssetID string
 
-const AdaAssetID = AssetID("ada.lovelace")
+const (
+	AdaPolicy        = "ada"
+	AdaAsset         = "lovelace"
+	AdaAssetIDString = AdaPolicy + "." + AdaAsset
+	AdaAssetID       = AssetID(AdaAssetIDString)
+)
 
 func FromSeparate(policy string, assetName string) AssetID {
 	return AssetID(fmt.Sprintf("%v.%v", policy, assetName))
