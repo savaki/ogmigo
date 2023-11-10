@@ -169,7 +169,7 @@ func TestClient_UtxosByTxIn(t *testing.T) {
 	ctx := context.Background()
 	client := New(WithEndpoint(endpoint), WithLogger(DefaultLogger))
 	utxos, err := client.UtxosByTxIn(ctx, chainsync.TxInQuery{
-		Transaction: chainsync.UtxoTxID{
+		Transaction: shared.UtxoTxID{
 			ID: "0000000000000000000000000000000000000000000000000000000000000000",
 		},
 		Index: 0,

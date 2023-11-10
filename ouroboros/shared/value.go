@@ -69,10 +69,10 @@ func Enough(have Value, want Value) (bool, error) {
 
 func (v Value) AddAsset(coins ...Coin) {
 	for _, coin := range coins {
-		if _, ok := v[coin.assetId.PolicyID()]; !ok {
-			v[coin.assetId.PolicyID()] = map[string]num.Int{}
+		if _, ok := v[coin.AssetId.PolicyID()]; !ok {
+			v[coin.AssetId.PolicyID()] = map[string]num.Int{}
 		}
-		v[coin.assetId.PolicyID()][coin.assetId.AssetName()] = v[coin.assetId.PolicyID()][coin.assetId.AssetName()].Add(coin.amount)
+		v[coin.AssetId.PolicyID()][coin.AssetId.AssetName()] = v[coin.AssetId.PolicyID()][coin.AssetId.AssetName()].Add(coin.Amount)
 	}
 }
 
@@ -102,8 +102,8 @@ func (v Value) AssetsExceptAda() Value {
 }
 
 type Coin struct {
-	assetId AssetID
-	amount  num.Int
+	AssetId AssetID
+	Amount  num.Int
 }
 
 func ValueFromCoins(coins ...Coin) Value {
