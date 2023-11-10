@@ -48,7 +48,7 @@ func testSubmitTxResult(t *testing.T) filepath.WalkFunc {
 	return func(path string, info fs.FileInfo, err error) error {
 		t.Run(filepath.Base(path), func(t *testing.T) {
 			if err != nil {
-				t.Fatalf("got %v; want nil", err)
+				t.Fatalf("Ogmios files missing. You may need to `rm -rf ext/ogmios/ && git clone git@github.com:CardanoSolutions/ogmios.git ext/ogmios/")
 			}
 			if info.IsDir() {
 				return
