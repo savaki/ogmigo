@@ -63,16 +63,16 @@ func (c *Client) CurrentProtocolParameters(ctx context.Context) (json.RawMessage
 }
 
 func (c *Client) GenesisConfig(ctx context.Context, era string) (json.RawMessage, error) {
-       var (
-               payload = makePayload("queryNetwork/genesisConfiguration", Map{"era": era})
-               content struct{ Result json.RawMessage }
-       )
+	var (
+		payload = makePayload("queryNetwork/genesisConfiguration", Map{"era": era})
+		content struct{ Result json.RawMessage }
+	)
 
-       if err := c.query(ctx, payload, &content); err != nil {
-               return nil, err
-       }
+	if err := c.query(ctx, payload, &content); err != nil {
+		return nil, err
+	}
 
-       return content.Result, nil
+	return content.Result, nil
 }
 
 type EraHistory struct {
@@ -130,10 +130,10 @@ func (c *Client) EraStart(ctx context.Context) (statequery.EraStart, error) {
 	return content.Result, nil
 }
 
-func (c *Client) UtxosByAddress(ctx context.Context, addresses ...string) ([]statequery.Utxo, error) {
+func (c *Client) UtxosByAddress(ctx context.Context, addresses ...string) ([]statequery.UtxoData, error) {
 	var (
 		payload = makePayload("queryLedgerState/utxo", Map{"addresses": addresses})
-		content struct{ Result []statequery.Utxo }
+		content struct{ Result []statequery.UtxoData }
 	)
 
 	if err := c.query(ctx, payload, &content); err != nil {
@@ -143,10 +143,10 @@ func (c *Client) UtxosByAddress(ctx context.Context, addresses ...string) ([]sta
 	return content.Result, nil
 }
 
-func (c *Client) UtxosByTxIn(ctx context.Context, txIns ...chainsync.TxInQuery) ([]statequery.Utxo, error) {
+func (c *Client) UtxosByTxIn(ctx context.Context, txIns ...chainsync.TxInQuery) ([]statequery.UtxoData, error) {
 	var (
 		payload = makePayload("queryLedgerState/utxo", Map{"outputReferences": txIns})
-		content struct{ Result []statequery.Utxo }
+		content struct{ Result []statequery.UtxoData }
 	)
 
 	if err := c.query(ctx, payload, &content); err != nil {

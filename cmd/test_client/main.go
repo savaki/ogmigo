@@ -108,7 +108,7 @@ func main() {
 	// 	fmt.Printf("GOT THE ADDRESSES - ", utxos_addr[1].Address, " - ", utxos_addr[1].Index)
 	// }
 
-	// id1 := chainsync.UtxoTxID{ID: "16fe7982c416714c22af503165eb9a49eaa55575b9c2e9deb2c400ed4592da03"}
+	// id1 := shared.UtxoTxID{ID: "16fe7982c416714c22af503165eb9a49eaa55575b9c2e9deb2c400ed4592da03"}
 	// query1 := chainsync.TxInQuery{Transaction: id1, Index: 0}
 
 	// utxos_txin, err := my_client.UtxosByTxIn(ctx, query1)

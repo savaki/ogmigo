@@ -21,16 +21,12 @@ type EraMilliseconds struct {
 	Milliseconds big.Int `json:"milliseconds"`
 }
 
-type Utxo struct {
-	Transaction UtxoTxID        `json:"transaction"`
-	Index       uint32          `json:"index"`
-	Address     string          `json:"address"`
-	Value       shared.Value    `json:"value"`
-	DatumHash   string          `json:"datumHash,omitempty"`
-	Datum       string          `json:"datum,omitempty"`
-	Script      json.RawMessage `json:"script,omitempty"`
-}
-
-type UtxoTxID struct {
-	ID string `json:"id"`
+type UtxoData struct {
+	InTransaction shared.UtxoTxID `json:"transaction"`
+	InIndex       uint32          `json:"index"`
+	OutAddress    string          `json:"address"`
+	OutValue      shared.Value    `json:"value"`
+	OutDatumHash  string          `json:"datumHash,omitempty"`
+	OutDatum      string          `json:"datum,omitempty"`
+	OutScript     json.RawMessage `json:"script,omitempty"`
 }
