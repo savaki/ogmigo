@@ -130,10 +130,10 @@ func (c *Client) EraStart(ctx context.Context) (statequery.EraStart, error) {
 	return content.Result, nil
 }
 
-func (c *Client) UtxosByAddress(ctx context.Context, addresses ...string) ([]statequery.UtxoData, error) {
+func (c *Client) UtxosByAddress(ctx context.Context, addresses ...string) ([]statequery.TxOut, error) {
 	var (
 		payload = makePayload("queryLedgerState/utxo", Map{"addresses": addresses})
-		content struct{ Result []statequery.UtxoData }
+		content struct{ Result []statequery.TxOut }
 	)
 
 	if err := c.query(ctx, payload, &content); err != nil {
@@ -143,10 +143,10 @@ func (c *Client) UtxosByAddress(ctx context.Context, addresses ...string) ([]sta
 	return content.Result, nil
 }
 
-func (c *Client) UtxosByTxIn(ctx context.Context, txIns ...chainsync.TxInQuery) ([]statequery.UtxoData, error) {
+func (c *Client) UtxosByTxIn(ctx context.Context, txIns ...chainsync.TxInQuery) ([]statequery.TxOut, error) {
 	var (
 		payload = makePayload("queryLedgerState/utxo", Map{"outputReferences": txIns})
-		content struct{ Result []statequery.UtxoData }
+		content struct{ Result []statequery.TxOut }
 	)
 
 	if err := c.query(ctx, payload, &content); err != nil {
