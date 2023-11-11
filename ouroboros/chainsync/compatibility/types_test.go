@@ -867,6 +867,5 @@ func ValueChecks(t *testing.T) {
 		if !shared.Equal(val8, val9) {
 			t.Fatalf("%v is not the expected value (%v)", val8, val9)
 		}
-
 	})
 }

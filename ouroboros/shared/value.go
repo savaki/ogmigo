@@ -8,6 +8,8 @@ import (
 
 type Value map[string]map[string]num.Int
 
+var ErrInsufficientFunds = fmt.Errorf("insufficient funds")
+
 func Add(a Value, b Value) Value {
 	result := Value{}
 	for policyId, assets := range a {
@@ -53,15 +55,11 @@ func Subtract(a Value, b Value) Value {
 }
 
 func Enough(have Value, want Value) (bool, error) {
-	var ErrInsufficientFunds = fmt.Errorf("insufficient funds")
-
 	for policyId, assets := range want {
 		if haveAssets, ok := have[policyId]; ok {
 			for assetName, amt := range assets {
-				if haveAssets[assetName].Int64() < amt.Int64() {
-					return false, fmt.Errorf("not enough %v (%v) to meet demand (%v): %w", assetName, have[policyId][assetName].Int64(), amt, ErrInsufficientFunds)
-				} else {
-					return false, fmt.Errorf("not enough %v (%v) to meet demand (%v): %w", assetName, have[policyId][assetName].Int64(), amt, ErrInsufficientFunds)
+				if haveAssets[assetName].BigInt().Cmp(amt.BigInt()) == -1 {
+					return false, fmt.Errorf("not enough %v (%v) to meet demand (%v): %w", assetName, have[policyId][assetName].String(), amt, ErrInsufficientFunds)
 				}
 			}
 		}
@@ -70,45 +68,39 @@ func Enough(have Value, want Value) (bool, error) {
 }
 
 func LessThan(a, b Value) bool {
-	if a.AdaLovelace().Int64() < b.AdaLovelace().Int64() {
-		return true
-	}
-	for policy, policyMap := range b.AssetsExceptAda() {
+	for policy, policyMap := range b {
 		for asset, amt := range policyMap {
-			if a[policy][asset].Int64() < amt.Int64() {
-				return true
+			if a[policy] != nil && a[policy][asset].BigInt().Cmp(amt.BigInt()) != -1 {
+				return false
 			}
 		}
 	}
-	return false
+
+	return true
 }
 
 func GreaterThan(a, b Value) bool {
-	if a.AdaLovelace().Int64() > b.AdaLovelace().Int64() {
-		return true
-	}
-	for policy, policyMap := range b.AssetsExceptAda() {
+	for policy, policyMap := range b {
 		for asset, amt := range policyMap {
-			if a[policy][asset].Int64() > amt.Int64() {
-				return true
+			if a[policy] != nil && a[policy][asset].BigInt().Cmp(amt.BigInt()) != 1 {
+				return false
 			}
 		}
 	}
-	return false
+
+	return true
 }
 
 func Equal(a, b Value) bool {
-	if a.AdaLovelace().Int64() == b.AdaLovelace().Int64() {
-		return true
-	}
-	for policy, policyMap := range b.AssetsExceptAda() {
+	for policy, policyMap := range b {
 		for asset, amt := range policyMap {
-			if a[policy][asset].Int64() == amt.Int64() {
-				return true
+			if a[policy] != nil && a[policy][asset].BigInt().Cmp(amt.BigInt()) != 0 {
+				return false
 			}
 		}
 	}
-	return false
+
+	return true
 }
 
 func (v Value) AddAsset(coins ...Coin) {
