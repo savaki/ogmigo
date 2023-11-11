@@ -19,6 +19,8 @@ import (
 	"testing"
 
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync/num"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/shared"
 )
 
 func TestCompatibleResult(t *testing.T) {
@@ -790,4 +792,81 @@ func TestCompatibleResult(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error unmarshalling response: %v", err)
 	}
+}
+
+func ValueChecks(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
+		equal1 := shared.ValueFromCoins(
+			shared.Coin{AssetId: shared.AdaAssetID, Amount: num.Int64(1000000)},
+			shared.Coin{AssetId: shared.FromSeparate("abra", "cadabra"), Amount: num.Int64(1234567890)},
+		)
+		equal2 := shared.ValueFromCoins(
+			shared.Coin{AssetId: shared.AdaAssetID, Amount: num.Int64(1000000)},
+			shared.Coin{AssetId: shared.FromSeparate("abra", "cadabra"), Amount: num.Int64(1234567890)},
+		)
+		if !shared.Equal(equal1, equal2) {
+			t.Fatalf("%v and %v are not equal", equal1, equal2)
+		}
+
+		val1 := shared.ValueFromCoins(
+			shared.Coin{AssetId: shared.AdaAssetID, Amount: num.Int64(1000001)},
+			shared.Coin{AssetId: shared.FromSeparate("abra", "cadabra"), Amount: num.Int64(1234567890)},
+		)
+		val2 := shared.ValueFromCoins(
+			shared.Coin{AssetId: shared.AdaAssetID, Amount: num.Int64(1000000)},
+			shared.Coin{AssetId: shared.FromSeparate("abra", "cadabra"), Amount: num.Int64(1234567890)},
+		)
+		val3 := shared.ValueFromCoins(
+			shared.Coin{AssetId: shared.AdaAssetID, Amount: num.Int64(1000000)},
+			shared.Coin{AssetId: shared.FromSeparate("abra", "cadabra"), Amount: num.Int64(12345678900)},
+		)
+		val4 := shared.ValueFromCoins(
+			shared.Coin{AssetId: shared.AdaAssetID, Amount: num.Int64(1000000)},
+			shared.Coin{AssetId: shared.FromSeparate("abra", "cadabra"), Amount: num.Int64(1234567890)},
+		)
+		if !shared.GreaterThan(val1, val2) {
+			t.Fatalf("%v is not greater than %v", val1, val2)
+		}
+		if !shared.LessThan(val2, val1) {
+			t.Fatalf("%v is not less than %v", val1, val2)
+		}
+		if !shared.GreaterThan(val3, val4) {
+			t.Fatalf("%v is not greater than %v", val3, val4)
+		}
+		if !shared.LessThan(val4, val3) {
+			t.Fatalf("%v is not less than %v", val4, val3)
+		}
+		if ok, err := shared.Enough(val3, val4); !ok {
+			t.Fatalf("%v does not have enough assets for %v: %v", val4, val3, err)
+		}
+		if shared.Equal(val1, val2) {
+			t.Fatalf("%v and %v are equal", val1, val2)
+		}
+		if shared.Equal(val3, val4) {
+			t.Fatalf("%v and %v are equal", val3, val4)
+		}
+
+		val5 := shared.Add(val1, val2)
+		val6 := shared.ValueFromCoins(
+			shared.Coin{AssetId: shared.AdaAssetID, Amount: num.Int64(2000001)},
+			shared.Coin{AssetId: shared.FromSeparate("abra", "cadabra"), Amount: num.Int64(2469135780)},
+		)
+		if !shared.Equal(val5, val6) {
+			t.Fatalf("%v is not the expected value (%v)", val5, val6)
+		}
+
+		val7 := shared.ValueFromCoins(
+			shared.Coin{AssetId: shared.AdaAssetID, Amount: num.Int64(600000)},
+			shared.Coin{AssetId: shared.FromSeparate("abra", "cadabra"), Amount: num.Int64(2345678900)},
+		)
+		val8 := shared.Subtract(val3, val7)
+		val9 := shared.ValueFromCoins(
+			shared.Coin{AssetId: shared.AdaAssetID, Amount: num.Int64(400000)},
+			shared.Coin{AssetId: shared.FromSeparate("abra", "cadabra"), Amount: num.Int64(1000000000)},
+		)
+		if !shared.Equal(val8, val9) {
+			t.Fatalf("%v is not the expected value (%v)", val8, val9)
+		}
+
+	})
 }

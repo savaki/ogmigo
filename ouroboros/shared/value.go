@@ -53,18 +53,62 @@ func Subtract(a Value, b Value) Value {
 }
 
 func Enough(have Value, want Value) (bool, error) {
+	var ErrInsufficientFunds = fmt.Errorf("insufficient funds")
+
 	for policyId, assets := range want {
-		for assetName, amt := range assets {
-			if haveAssets, ok := have[policyId]; ok {
+		if haveAssets, ok := have[policyId]; ok {
+			for assetName, amt := range assets {
 				if haveAssets[assetName].Int64() < amt.Int64() {
-					return false, fmt.Errorf("not enough %v.%v to meet demand", policyId, assetName)
+					return false, fmt.Errorf("not enough %v (%v) to meet demand (%v): %w", assetName, have[policyId][assetName].Int64(), amt, ErrInsufficientFunds)
+				} else {
+					return false, fmt.Errorf("not enough %v (%v) to meet demand (%v): %w", assetName, have[policyId][assetName].Int64(), amt, ErrInsufficientFunds)
 				}
-			} else {
-				return false, fmt.Errorf("not enough %v.%v to meet demand", policyId, assetName)
 			}
 		}
 	}
 	return true, nil
+}
+
+func LessThan(a, b Value) bool {
+	if a.AdaLovelace().Int64() < b.AdaLovelace().Int64() {
+		return true
+	}
+	for policy, policyMap := range b.AssetsExceptAda() {
+		for asset, amt := range policyMap {
+			if a[policy][asset].Int64() < amt.Int64() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func GreaterThan(a, b Value) bool {
+	if a.AdaLovelace().Int64() > b.AdaLovelace().Int64() {
+		return true
+	}
+	for policy, policyMap := range b.AssetsExceptAda() {
+		for asset, amt := range policyMap {
+			if a[policy][asset].Int64() > amt.Int64() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func Equal(a, b Value) bool {
+	if a.AdaLovelace().Int64() == b.AdaLovelace().Int64() {
+		return true
+	}
+	for policy, policyMap := range b.AssetsExceptAda() {
+		for asset, amt := range policyMap {
+			if a[policy][asset].Int64() == amt.Int64() {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (v Value) AddAsset(coins ...Coin) {
