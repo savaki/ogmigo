@@ -22,6 +22,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
+// Int is a wrapper of sorts around big.Int. One of the intentions is to prevent users
+// from being directly exposed to the big.Int API and usage of BigInt(). This is due
+// to big.Int introducing bugs if not careful with its usage and its API.
 type Int big.Int
 
 func Int64(v int64) Int {
@@ -82,6 +85,18 @@ func (i Int) String() string {
 func (i Int) Sub(that Int) Int {
 	sum := big.NewInt(0).Sub(i.BigInt(), that.BigInt())
 	return Int(*sum)
+}
+
+func (i Int) LessThan(that Int) bool {
+	return i.BigInt().Cmp(that.BigInt()) == -1
+}
+
+func (i Int) GreaterThan(that Int) bool {
+	return i.BigInt().Cmp(that.BigInt()) == 1
+}
+
+func (i Int) Equal(that Int) bool {
+	return i.BigInt().Cmp(that.BigInt()) == 0
 }
 
 func (i *Int) UnmarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {

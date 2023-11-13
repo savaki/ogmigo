@@ -58,7 +58,7 @@ func Enough(have Value, want Value) (bool, error) {
 	for policyId, assets := range want {
 		if haveAssets, ok := have[policyId]; ok {
 			for assetName, amt := range assets {
-				if haveAssets[assetName].BigInt().Cmp(amt.BigInt()) == -1 {
+				if haveAssets[assetName].LessThan(amt) {
 					return false, fmt.Errorf("not enough %v (%v) to meet demand (%v): %w", assetName, have[policyId][assetName].String(), amt, ErrInsufficientFunds)
 				}
 			}
@@ -70,7 +70,7 @@ func Enough(have Value, want Value) (bool, error) {
 func LessThan(a, b Value) bool {
 	for policy, policyMap := range b {
 		for asset, amt := range policyMap {
-			if a[policy] != nil && a[policy][asset].BigInt().Cmp(amt.BigInt()) != -1 {
+			if a[policy] != nil && !a[policy][asset].LessThan(amt) {
 				return false
 			}
 		}
@@ -82,7 +82,7 @@ func LessThan(a, b Value) bool {
 func GreaterThan(a, b Value) bool {
 	for policy, policyMap := range b {
 		for asset, amt := range policyMap {
-			if a[policy] != nil && a[policy][asset].BigInt().Cmp(amt.BigInt()) != 1 {
+			if a[policy] != nil && !a[policy][asset].GreaterThan(amt) {
 				return false
 			}
 		}
@@ -94,7 +94,7 @@ func GreaterThan(a, b Value) bool {
 func Equal(a, b Value) bool {
 	for policy, policyMap := range b {
 		for asset, amt := range policyMap {
-			if a[policy] != nil && a[policy][asset].BigInt().Cmp(amt.BigInt()) != 0 {
+			if a[policy] != nil && !a[policy][asset].Equal(amt) {
 				return false
 			}
 		}
