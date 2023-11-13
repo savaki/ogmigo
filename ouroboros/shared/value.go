@@ -8,6 +8,8 @@ import (
 
 type Value map[string]map[string]num.Int
 
+var ErrInsufficientFunds = fmt.Errorf("insufficient funds")
+
 func Add(a Value, b Value) Value {
 	result := Value{}
 	for policyId, assets := range a {
@@ -54,17 +56,51 @@ func Subtract(a Value, b Value) Value {
 
 func Enough(have Value, want Value) (bool, error) {
 	for policyId, assets := range want {
-		for assetName, amt := range assets {
-			if haveAssets, ok := have[policyId]; ok {
-				if haveAssets[assetName].Int64() < amt.Int64() {
-					return false, fmt.Errorf("not enough %v.%v to meet demand", policyId, assetName)
+		if haveAssets, ok := have[policyId]; ok {
+			for assetName, amt := range assets {
+				if haveAssets[assetName].LessThan(amt) {
+					return false, fmt.Errorf("not enough %v (%v) to meet demand (%v): %w", assetName, have[policyId][assetName].String(), amt, ErrInsufficientFunds)
 				}
-			} else {
-				return false, fmt.Errorf("not enough %v.%v to meet demand", policyId, assetName)
 			}
 		}
 	}
 	return true, nil
+}
+
+func LessThan(a, b Value) bool {
+	for policy, policyMap := range b {
+		for asset, amt := range policyMap {
+			if a[policy] != nil && !a[policy][asset].LessThan(amt) {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func GreaterThan(a, b Value) bool {
+	for policy, policyMap := range b {
+		for asset, amt := range policyMap {
+			if a[policy] != nil && !a[policy][asset].GreaterThan(amt) {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func Equal(a, b Value) bool {
+	for policy, policyMap := range b {
+		for asset, amt := range policyMap {
+			if a[policy] != nil && !a[policy][asset].Equal(amt) {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func (v Value) AddAsset(coins ...Coin) {

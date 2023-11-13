@@ -20,6 +20,7 @@ import (
 
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
 	v5 "github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync/v5"
+	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/shared"
 )
 
 // Support findIntersect (v6) / FindIntersection (v5) universally.
@@ -195,4 +196,30 @@ func (r CompatibleResponsePraos) MustNextBlockResult() CompatibleResultNextBlock
 		panic(fmt.Errorf("must only use *Must* methods after switching on the nextBlock method; called on %v", r.Method))
 	}
 	return CompatibleResultNextBlock(r.Result.(chainsync.ResultNextBlockPraos))
+}
+
+type CompatibleValue shared.Value
+
+func (c *CompatibleValue) UnmarshalJSON(data []byte) error {
+	var v shared.Value
+	err := json.Unmarshal(data, &v)
+	if err == nil {
+		*c = CompatibleValue(v)
+		return nil
+	}
+
+	var r5 v5.ValueV5
+	err = json.Unmarshal(data, &r5)
+	if err != nil {
+		return err
+	}
+
+	if r5.Coins.BigInt().BitLen() != 0 {
+		shared.Value(*c).AddAsset(shared.Coin{AssetId: shared.AdaAssetID, Amount: r5.Coins})
+	}
+	for asset, coins := range r5.Assets {
+		shared.Value(*c).AddAsset(shared.Coin{AssetId: asset, Amount: coins})
+	}
+
+	return nil
 }
