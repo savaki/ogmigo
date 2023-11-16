@@ -31,7 +31,7 @@ That said, there are a few general caveats to note.
 
 ### Creating Value Instances
 
-When creating a new `Value`, there are some recommended methods to do so. If creating a `Value` from scratch, using the `ValueFromCoins()` call is recommended. (`Coin` attaches asset IDs to asset amounts.) You can pass in as many `Coin` instances as you wish. If you wish to add to a currently existing `Value`, the `AddAsset()` call is recommended.
+When creating a new `Value`, there are some recommended methods to do so. If creating a `Value` from scratch, using the `ValueFromCoins()` call is recommended. (`Coin` attaches asset IDs to asset amounts.) You can pass in as many `Coin` instances as you wish. If you wish to add to a currently existing `Value` or change a current asset amount, the `AddAsset()` call is recommended.
 
 Example code can be found below.
 
