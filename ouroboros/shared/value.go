@@ -143,7 +143,7 @@ type Coin struct {
 }
 
 func ValueFromCoins(coins ...Coin) Value {
-	var value Value
+	value := Value{}
 	value.AddAsset(coins...)
 	return value
 }
