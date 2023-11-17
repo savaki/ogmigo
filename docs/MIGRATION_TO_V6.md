@@ -85,7 +85,8 @@ totalValue := shared.ValueFromCoins(
     shared.Coin{AssetId: assetId1, Amount: num.Int64(2_000_000)},
     shared.Coin{AssetId: assetId2, Amount: num.Int64(3_000_000)},
 )
-for policy, policyMap := range totalValue.AssetsExceptAda() {
+nonAdaAssets, cnt := equal1.AssetsExceptAda()
+for policy, policyMap := range nonAdaAssets {
     for asset, amt := range policyMap {
         fmt.Printf(" - %v %v\n", amt.String(), shared.FromSeparate(policy, asset))
     }
