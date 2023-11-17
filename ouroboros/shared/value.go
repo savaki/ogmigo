@@ -123,8 +123,9 @@ func (v Value) AssetAmount(asset AssetID) num.Int {
 	return num.Int64(0)
 }
 
-func (v Value) AssetsExceptAda() Value {
+func (v Value) AssetsExceptAda() (Value, uint32) {
 	policies := Value{}
+	var cnt uint32 = 0
 	for policy, tokenMap := range v {
 		if policy == AdaPolicy {
 			continue
@@ -132,9 +133,31 @@ func (v Value) AssetsExceptAda() Value {
 		policies[policy] = map[string]num.Int{}
 		for token, quantity := range tokenMap {
 			policies[policy][token] = quantity
+			cnt++
 		}
 	}
-	return policies
+	return policies, cnt
+}
+
+func (v Value) AssetsExceptAdaCount() uint32 {
+	var cnt uint32 = 0
+	for policy, tokenMap := range v {
+		if policy == AdaPolicy {
+			continue
+		}
+		cnt += uint32(len(tokenMap))
+	}
+	return cnt
+}
+
+func (v Value) IsAdaPresent() bool {
+	if v[AdaPolicy] != nil {
+		if v[AdaPolicy][AdaAsset].GreaterThan(num.Uint64(0)) {
+			return true
+		}
+	}
+
+	return false
 }
 
 type Coin struct {
