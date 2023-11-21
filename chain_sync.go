@@ -46,6 +46,10 @@ func (c *ChainSync) Done() <-chan struct{} {
 	return c.done
 }
 
+func (c *ChainSync) Err() <-chan error {
+	return c.errs
+}
+
 // Close the ChainSync connection
 func (c *ChainSync) Close() error {
 	c.cancel()
