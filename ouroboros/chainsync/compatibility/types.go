@@ -199,3 +199,40 @@ func (c *CompatibleValue) UnmarshalDynamoDBAttributeValue(item *dynamodb.Attribu
 	*c = CompatibleValue(s)
 	return nil
 }
+
+type CompatibleResult struct {
+	NextBlock        *CompatibleResultNextBlock
+	FindIntersection *CompatibleResultFindIntersection
+}
+
+func (c *CompatibleResult) UnmarshalJSON(data []byte) error {
+	var rfi CompatibleResultFindIntersection
+	err := json.Unmarshal(data, &rfi)
+	if err == nil {
+		*c.FindIntersection = rfi
+		return nil
+	}
+
+	var rnb CompatibleResultNextBlock
+	err = json.Unmarshal(data, &rnb)
+	if err == nil {
+		*c.NextBlock = rnb
+		return nil
+	}
+
+	return fmt.Errorf("unable to find an appropriate result")
+}
+
+func (c *CompatibleResult) UnmarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
+	var rfi CompatibleResultFindIntersection
+	if err := dynamodbattribute.Unmarshal(item, &rfi); err != nil {
+		var rnb CompatibleResultNextBlock
+		if err := dynamodbattribute.Unmarshal(item, &rnb); err != nil {
+			return err
+		}
+		*c.NextBlock = rnb
+		return nil
+	}
+	*c.FindIntersection = rfi
+	return nil
+}
