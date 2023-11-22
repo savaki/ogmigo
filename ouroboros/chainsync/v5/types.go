@@ -61,11 +61,13 @@ func (t TxV5) ConvertToV6() chainsync.Tx {
 
 	var tc *chainsync.Lovelace
 	if t.Body.TotalCollateral != nil {
-		tc = &chainsync.Lovelace{Lovelace: num.Int64(*t.Body.TotalCollateral)}
+		temp := chainsync.Lovelace{Lovelace: num.Int64(*t.Body.TotalCollateral)}
+		tc = &temp
 	}
 	var cr *chainsync.TxOut
 	if t.Body.CollateralReturn != nil {
-		*cr = t.Body.CollateralReturn.ConvertToV6()
+		temp := t.Body.CollateralReturn.ConvertToV6()
+		cr = &temp
 	}
 
 	cbor, _ := base64.StdEncoding.DecodeString(t.Raw)
@@ -271,7 +273,7 @@ func (b BlockV5) ConvertToV6() chainsync.Block {
 	nonceProof := b.Header.Nonce["output"]
 	var nonce *chainsync.Nonce
 	if nonceOutput != "" || nonceProof != "" {
-		*nonce = chainsync.Nonce{Output: nonceOutput, Proof: nonceProof}
+		nonce = &chainsync.Nonce{Output: nonceOutput, Proof: nonceProof}
 	}
 	majorVer := uint32(b.Header.ProtocolVersion["major"])
 	protocolVersion := chainsync.ProtocolVersion{
