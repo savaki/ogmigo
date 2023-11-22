@@ -508,6 +508,26 @@ type ResultFindIntersectionV5 struct {
 	IntersectionNotFound *IntersectionNotFoundV5 `json:",omitempty" dynamodbav:",omitempty"`
 }
 
+func (r ResultFindIntersectionV5) ConvertToV6() chainsync.ResultFindIntersectionPraos {
+	var rfi chainsync.ResultFindIntersectionPraos
+	if r.IntersectionFound != nil {
+		p := r.IntersectionFound.Point.ConvertToV6()
+		tip := r.IntersectionFound.Tip.ConvertToV6()
+		rfi.Intersection = &p
+		rfi.Tip = &tip
+		rfi.Error = nil
+		rfi.ID = nil
+
+	} else if r.IntersectionNotFound != nil {
+		// Emulate the v6 IntersectionNotFound error as best as possible.
+		tip := r.IntersectionNotFound.Tip.ConvertToV6()
+		err := chainsync.ResultError{Code: 1000, Message: "Intersection not found", Data: &tip}
+		rfi.Error = &err
+	}
+
+	return rfi
+}
+
 type RollBackwardV5 struct {
 	Point PointV5 `json:"point,omitempty" dynamodbav:"point,omitempty"`
 	Tip   TipV5   `json:"tip,omitempty"   dynamodbav:"tip,omitempty"`
@@ -548,6 +568,29 @@ type ResultNextBlockV5 struct {
 	RollBackward *RollBackwardV5 `json:",omitempty" dynamodbav:",omitempty"`
 }
 
+func (r ResultNextBlockV5) ConvertToV6() chainsync.ResultNextBlockPraos {
+	var rnb chainsync.ResultNextBlockPraos
+	if r.RollForward != nil {
+		tip := r.RollForward.Tip.ConvertToV6()
+		rollForwardBlock := r.RollForward.Block.GetNonByronBlock()
+		if rollForwardBlock == nil {
+			return rnb
+		}
+		block := rollForwardBlock.ConvertToV6()
+		rnb.Direction = chainsync.RollForwardString
+		rnb.Tip = &tip
+		rnb.Block = &block
+	} else if r.RollBackward != nil {
+		tip := r.RollBackward.Tip.ConvertToV6()
+		point := r.RollBackward.Point.ConvertToV6()
+		rnb.Direction = chainsync.RollBackwardString
+		rnb.Tip = &tip
+		rnb.Point = &point
+	}
+
+	return rnb
+}
+
 type IntersectionFoundV5 struct {
 	Point *PointV5
 	Tip   *TipV5
@@ -578,4 +621,61 @@ type ResponseV5 struct {
 	MethodName  string          `json:"methodname,omitempty"  dynamodbav:"methodname,omitempty"`
 	Result      *ResultV5       `json:"result,omitempty"      dynamodbav:"result,omitempty"`
 	Reflection  json.RawMessage `json:"reflection,omitempty"  dynamodbav:"reflection,omitempty"`
+}
+
+func (r ResponseV5) ConvertToV6() chainsync.ResponsePraos {
+	var c chainsync.ResponsePraos
+
+	// All we really care about is the result, not the metadata.
+	if r.Result.IntersectionFound != nil {
+		c.Method = chainsync.FindIntersectionMethod
+
+		p := r.Result.IntersectionFound.Point.ConvertToV6()
+		t := r.Result.IntersectionFound.Tip.ConvertToV6()
+
+		var findIntersection chainsync.ResultFindIntersectionPraos
+		findIntersection.Intersection = &p
+		findIntersection.Tip = &t
+		c.Result = &findIntersection
+	} else if r.Result.IntersectionNotFound != nil {
+		c.Method = chainsync.FindIntersectionMethod
+		t := r.Result.IntersectionNotFound.Tip.ConvertToV6()
+		var e chainsync.ResultError
+		e.Data = &t
+		e.Code = 1000
+		e.Message = "Intersection not found - Conversion from a v5 Ogmigo call"
+		c.Error = &e
+	} else if r.Result.RollForward != nil {
+		c.Method = chainsync.NextBlockMethod
+
+		rollForwardBlock := r.Result.RollForward.Block.GetNonByronBlock()
+		if rollForwardBlock == nil {
+			return c
+		}
+		block := rollForwardBlock.ConvertToV6()
+
+		t := r.Result.RollForward.Tip.ConvertToV6()
+
+		var nextBlock chainsync.ResultNextBlockPraos
+		nextBlock.Direction = chainsync.RollForwardString
+		nextBlock.Tip = &t
+		nextBlock.Block = &block
+		c.Result = &nextBlock
+	} else if r.Result.RollBackward != nil {
+		c.Method = chainsync.NextBlockMethod
+		var t chainsync.Tip
+		t.Slot = r.Result.RollBackward.Tip.Slot
+		t.ID = r.Result.RollBackward.Tip.Hash
+		t.Height = r.Result.RollBackward.Tip.BlockNo
+
+		p := r.Result.RollBackward.Point.ConvertToV6()
+		var nextBlock chainsync.ResultNextBlockPraos
+		nextBlock.Direction = chainsync.RollBackwardString
+		nextBlock.Tip = &t
+		nextBlock.Point = &p
+		c.Result = &nextBlock
+	}
+	c.ID = r.Reflection
+	c.JsonRpc = "2.0"
+	return c
 }
