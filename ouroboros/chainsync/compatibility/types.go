@@ -33,35 +33,38 @@ func (c *CompatibleResultFindIntersection) UnmarshalJSON(data []byte) error {
 	// Assume v6 responses first, then fall back to manual v5 processing.
 	var r chainsync.ResultFindIntersectionPraos
 	err := json.Unmarshal(data, &r)
-	if err == nil && r.Tip != nil {
+	// We check intersection here, as that key is distinct from the other result types
+	if err == nil && r.Intersection != nil {
 		*c = CompatibleResultFindIntersection(r)
 		return nil
 	}
 
 	var r5 v5.ResultFindIntersectionV5
 	err = json.Unmarshal(data, &r5)
-	if err != nil {
-		return err
-	} else {
+	if err == nil && (r5.IntersectionFound != nil || r5.IntersectionNotFound != nil) {
 		*c = CompatibleResultFindIntersection(r5.ConvertToV6())
+		return nil
+	} else {
+		return fmt.Errorf("unable to parse as either v5 or v6 FindIntersection: %w", err)
 	}
-
-	// TODO: Further error handling here.
-	return nil
 }
 
 func (c *CompatibleResultFindIntersection) UnmarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
 	var s chainsync.ResultFindIntersectionPraos
-	if err := dynamodbattribute.Unmarshal(item, &s); err != nil {
-		var v v5.ResultFindIntersectionV5
-		if err := dynamodbattribute.Unmarshal(item, &v); err != nil {
-			return err
-		}
-		*c = CompatibleResultFindIntersection(v.ConvertToV6())
+	err := dynamodbattribute.Unmarshal(item, &s)
+	if err == nil && s.Intersection != nil {
+		*c = CompatibleResultFindIntersection(s)
 		return nil
 	}
-	*c = CompatibleResultFindIntersection(s)
-	return nil
+
+	var v v5.ResultFindIntersectionV5
+	err = dynamodbattribute.Unmarshal(item, &v)
+	if err == nil && s.Intersection != nil {
+		*c = CompatibleResultFindIntersection(v.ConvertToV6())
+		return nil
+	} else {
+		return fmt.Errorf("unable to parse as either v5 or v6 FindIntersection: %w", err)
+	}
 }
 
 func (c CompatibleResultFindIntersection) String() string {
@@ -75,35 +78,37 @@ func (c *CompatibleResultNextBlock) UnmarshalJSON(data []byte) error {
 	// Assume v6 responses first, then fall back to manual v5 processing.
 	var r chainsync.ResultNextBlockPraos
 	err := json.Unmarshal(data, &r)
-	if err == nil && r.Tip != nil {
+	if err == nil && r.Direction != "" {
 		*c = CompatibleResultNextBlock(r)
 		return nil
 	}
 
 	var v v5.ResultNextBlockV5
 	err = json.Unmarshal(data, &v)
-	if err != nil {
-		return err
-	} else {
+	if err == nil && (v.RollBackward != nil || v.RollForward != nil) {
 		*c = CompatibleResultNextBlock(v.ConvertToV6())
+		return nil
+	} else {
+		return fmt.Errorf("unable to parse as either v5 of v6 NextBlock: %w", err)
 	}
-
-	// TODO: Further error handling here.
-	return nil
 }
 
 func (c *CompatibleResultNextBlock) UnmarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
 	var s chainsync.ResultNextBlockPraos
-	if err := dynamodbattribute.Unmarshal(item, &s); err != nil {
-		var v v5.ResultNextBlockV5
-		if err := dynamodbattribute.Unmarshal(item, &v); err != nil {
-			return err
-		}
-		*c = CompatibleResultNextBlock(v.ConvertToV6())
+	err := dynamodbattribute.Unmarshal(item, &s)
+	if err == nil && s.Direction != "" {
+		*c = CompatibleResultNextBlock(s)
 		return nil
 	}
-	*c = CompatibleResultNextBlock(s)
-	return nil
+
+	var v v5.ResultNextBlockV5
+	err = dynamodbattribute.Unmarshal(item, &v)
+	if err == nil && (v.RollBackward != nil || v.RollForward != nil) {
+		*c = CompatibleResultNextBlock(v.ConvertToV6())
+		return nil
+	} else {
+		return fmt.Errorf("unable to parse as either v5 or v6 NextBlock: %w", err)
+	}
 }
 
 func (c CompatibleResultNextBlock) String() string {
