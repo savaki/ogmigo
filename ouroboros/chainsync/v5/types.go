@@ -168,7 +168,7 @@ func (t TxOutV5) ConvertToV6() chainsync.TxOut {
 type TxOutsV5 []TxOutV5
 
 func (t TxOutsV5) ConvertToV6() chainsync.TxOuts {
-	txOuts := make(chainsync.TxOuts, len(t))
+	var txOuts []chainsync.TxOut
 	for _, txOut := range t {
 		txOuts = append(txOuts, txOut.ConvertToV6())
 	}
@@ -259,86 +259,6 @@ func (b BlockV5) PointStruct() PointStructV5 {
 		Hash:    b.HeaderHash,
 		Slot:    b.Header.Slot,
 	}
-}
-
-func (b BlockV5) ConvertToV6() chainsync.Block {
-	txArray := make([]chainsync.Tx, len(b.Body))
-	for _, t := range b.Body {
-		txArray = append(txArray, t.ConvertToV6())
-	}
-
-	// The v5 spec indicates that both nonce entries are optional. We'll create a v6
-	// entry (which also indicates both are optional) if either is present.
-	nonceOutput := b.Header.Nonce["output"]
-	nonceProof := b.Header.Nonce["output"]
-	var nonce *chainsync.Nonce
-	if nonceOutput != "" || nonceProof != "" {
-		nonce = &chainsync.Nonce{Output: nonceOutput, Proof: nonceProof}
-	}
-	majorVer := uint32(b.Header.ProtocolVersion["major"])
-	protocolVersion := chainsync.ProtocolVersion{
-		Major: majorVer,
-		Minor: uint32(b.Header.ProtocolVersion["minor"]),
-		Patch: uint32(b.Header.ProtocolVersion["patch"]),
-	}
-	protocol := chainsync.Protocol{Version: protocolVersion}
-
-	var opCert chainsync.OpCert
-	if b.Header.OpCert != nil {
-		var vk []byte
-		if b.Header.OpCert["hotVk"] != nil {
-			vk, _ = base64.StdEncoding.DecodeString(b.Header.OpCert["hotVk"].(string))
-		}
-		count := b.Header.OpCert["count"]
-		kesPd := b.Header.OpCert["kesPeriod"]
-
-		// Yes, the uint64 casts are ugly. JSON covers floats but not ints. Unmarshalling
-		// into interface{} creates float64. If we treat interface{} as uint64, the code
-		// compiles but crashes at runtime. So, we cast float64 to uint64.
-		opCert = chainsync.OpCert{
-			Count: uint64(count.(float64)),
-			Kes:   chainsync.Kes{Period: uint64(kesPd.(float64)), VerificationKey: string(vk)},
-		}
-	}
-
-	var leaderValue *chainsync.LeaderValue
-	if b.Header.LeaderValue["output"] != nil && b.Header.LeaderValue["proof"] != nil {
-		decodedOutput, _ := base64.StdEncoding.DecodeString(string(b.Header.LeaderValue["output"]))
-		decodedProof, _ := base64.StdEncoding.DecodeString(string(b.Header.LeaderValue["proof"]))
-		leaderValue = &chainsync.LeaderValue{
-			Output: string(decodedOutput),
-			Proof:  string(decodedProof),
-		}
-	}
-
-	issuerVrf, _ := base64.StdEncoding.DecodeString(b.Header.IssuerVrf)
-	issuer := chainsync.BlockIssuer{
-		VerificationKey:        b.Header.IssuerVK,
-		VrfVerificationKey:     string(issuerVrf),
-		OperationalCertificate: opCert,
-		LeaderValue:            leaderValue,
-	}
-
-	// Unfortunately, due to how v5 data is formatted on the wire and stored by Ogmigo,
-	// we have to use other data to determine the era. Because the protocol version can
-	// be determined before a fork, unlike the slot number, we use the protocol version.
-	// This will make it easier to add support for future forks before the fork occurs,
-	// while also supporting testnet and other networks that use the same versioning.
-	b6 := chainsync.Block{
-		Type:         "praos",
-		Era:          shared.MajorEras[majorVer],
-		ID:           b.HeaderHash,
-		Ancestor:     b.Header.PrevHash,
-		Nonce:        nonce,
-		Height:       b.Header.BlockHeight,
-		Size:         chainsync.BlockSize{Bytes: int64(b.Header.BlockSize)},
-		Slot:         b.Header.Slot,
-		Transactions: txArray,
-		Protocol:     protocol,
-		Issuer:       issuer,
-	}
-
-	return b6
 }
 
 type PointStructV5 struct {
@@ -544,6 +464,22 @@ type RollForwardBlockV5 struct {
 	Shelley *BlockV5    `json:"shelley,omitempty" dynamodbav:"shelley,omitempty"`
 }
 
+func (b RollForwardBlockV5) Era() string {
+	if b.Shelley != nil {
+		return "shelley"
+	} else if b.Allegra != nil {
+		return "allegra"
+	} else if b.Mary != nil {
+		return "mary"
+	} else if b.Alonzo != nil {
+		return "alonzo"
+	} else if b.Babbage != nil {
+		return "babbage"
+	} else {
+		return "unknown"
+	}
+}
+
 func (b RollForwardBlockV5) GetNonByronBlock() *BlockV5 {
 	if b.Shelley != nil {
 		return b.Shelley
@@ -560,6 +496,83 @@ func (b RollForwardBlockV5) GetNonByronBlock() *BlockV5 {
 	}
 }
 
+func (b RollForwardBlockV5) ConvertToV6() (chainsync.Block, error) {
+	nbb := b.GetNonByronBlock()
+	if nbb == nil {
+		return chainsync.Block{}, fmt.Errorf("Byron blocks not supported")
+	}
+	var txArray []chainsync.Tx
+	for _, t := range nbb.Body {
+		txArray = append(txArray, t.ConvertToV6())
+	}
+
+	// The v5 spec indicates that both nonce entries are optional. We'll create a v6
+	// entry (which also indicates both are optional) if either is present.
+	nonceOutput := nbb.Header.Nonce["output"]
+	nonceProof := nbb.Header.Nonce["output"]
+	var nonce *chainsync.Nonce
+	if nonceOutput != "" || nonceProof != "" {
+		nonce = &chainsync.Nonce{Output: nonceOutput, Proof: nonceProof}
+	}
+	majorVer := uint32(nbb.Header.ProtocolVersion["major"])
+	protocolVersion := chainsync.ProtocolVersion{
+		Major: majorVer,
+		Minor: uint32(nbb.Header.ProtocolVersion["minor"]),
+		Patch: uint32(nbb.Header.ProtocolVersion["patch"]),
+	}
+	protocol := chainsync.Protocol{Version: protocolVersion}
+
+	var opCert chainsync.OpCert
+	if nbb.Header.OpCert != nil {
+		var vk []byte
+		if nbb.Header.OpCert["hotVk"] != nil {
+			vk, _ = base64.StdEncoding.DecodeString(nbb.Header.OpCert["hotVk"].(string))
+		}
+		count := nbb.Header.OpCert["count"]
+		kesPd := nbb.Header.OpCert["kesPeriod"]
+
+		// Yes, the uint64 casts are ugly. JSON covers floats but not ints. Unmarshalling
+		// into interface{} creates float64. If we treat interface{} as uint64, the code
+		// compiles but crashes at runtime. So, we cast float64 to uint64.
+		opCert = chainsync.OpCert{
+			Count: uint64(count.(float64)),
+			Kes:   chainsync.Kes{Period: uint64(kesPd.(float64)), VerificationKey: string(vk)},
+		}
+	}
+
+	var leaderValue *chainsync.LeaderValue
+	if nbb.Header.LeaderValue["output"] != nil && nbb.Header.LeaderValue["proof"] != nil {
+		decodedOutput, _ := base64.StdEncoding.DecodeString(string(nbb.Header.LeaderValue["output"]))
+		decodedProof, _ := base64.StdEncoding.DecodeString(string(nbb.Header.LeaderValue["proof"]))
+		leaderValue = &chainsync.LeaderValue{
+			Output: string(decodedOutput),
+			Proof:  string(decodedProof),
+		}
+	}
+
+	issuerVrf, _ := base64.StdEncoding.DecodeString(nbb.Header.IssuerVrf)
+	issuer := chainsync.BlockIssuer{
+		VerificationKey:        nbb.Header.IssuerVK,
+		VrfVerificationKey:     string(issuerVrf),
+		OperationalCertificate: opCert,
+		LeaderValue:            leaderValue,
+	}
+
+	return chainsync.Block{
+		Type:         "praos",
+		Era:          b.Era(),
+		ID:           nbb.HeaderHash,
+		Ancestor:     nbb.Header.PrevHash,
+		Nonce:        nonce,
+		Height:       nbb.Header.BlockHeight,
+		Size:         chainsync.BlockSize{Bytes: int64(nbb.Header.BlockSize)},
+		Slot:         nbb.Header.Slot,
+		Transactions: txArray,
+		Protocol:     protocol,
+		Issuer:       issuer,
+	}, nil
+}
+
 type RollForwardV5 struct {
 	Block RollForwardBlockV5 `json:"block,omitempty" dynamodbav:"block,omitempty"`
 	Tip   TipV5              `json:"tip,omitempty"   dynamodbav:"tip,omitempty"`
@@ -574,11 +587,10 @@ func (r ResultNextBlockV5) ConvertToV6() chainsync.ResultNextBlockPraos {
 	var rnb chainsync.ResultNextBlockPraos
 	if r.RollForward != nil {
 		tip := r.RollForward.Tip.ConvertToV6()
-		rollForwardBlock := r.RollForward.Block.GetNonByronBlock()
-		if rollForwardBlock == nil {
-			return rnb
+		block, err := r.RollForward.Block.ConvertToV6()
+		if err != nil {
+			// NOTE: we currently don't support byron blocks, please reach out if you need this!
 		}
-		block := rollForwardBlock.ConvertToV6()
 		rnb.Direction = chainsync.RollForwardString
 		rnb.Tip = &tip
 		rnb.Block = &block
@@ -650,11 +662,10 @@ func (r ResponseV5) ConvertToV6() chainsync.ResponsePraos {
 	} else if r.Result.RollForward != nil {
 		c.Method = chainsync.NextBlockMethod
 
-		rollForwardBlock := r.Result.RollForward.Block.GetNonByronBlock()
-		if rollForwardBlock == nil {
-			return c
+		block, err := r.Result.RollForward.Block.ConvertToV6()
+		if err != nil {
+			// NOTE: we currently don't support byron, reach out to us if you need this supported!
 		}
-		block := rollForwardBlock.ConvertToV6()
 
 		t := r.Result.RollForward.Tip.ConvertToV6()
 
