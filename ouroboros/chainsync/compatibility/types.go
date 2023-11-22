@@ -214,14 +214,14 @@ func (c *CompatibleResult) UnmarshalJSON(data []byte) error {
 	var rfi CompatibleResultFindIntersection
 	err := json.Unmarshal(data, &rfi)
 	if err == nil {
-		*c.FindIntersection = rfi
+		(*c).FindIntersection = &rfi
 		return nil
 	}
 
 	var rnb CompatibleResultNextBlock
 	err = json.Unmarshal(data, &rnb)
 	if err == nil {
-		*c.NextBlock = rnb
+		(*c).NextBlock = &rnb
 		return nil
 	}
 

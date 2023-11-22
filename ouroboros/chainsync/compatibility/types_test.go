@@ -782,6 +782,11 @@ func TestCompatibleResult(t *testing.T) {
 	var method8 chainsync.ResultNextBlockPraos
 	err = json.Unmarshal([]byte(dataFindIntersectionNotFound), &method8)
 	assert.Nil(t, err)
+
+	dataV5Result := `{"IntersectionFound":{"Point":{"hash":"fe896cf51a9a2309fea7c3527b992c3c4b94073b744b6f29bb844cf0c5491e72","slot":33951595},"Tip":{"blockNo":1470914,"hash":"fe896cf51a9a2309fea7c3527b992c3c4b94073b744b6f29bb844cf0c5491e72","slot":33951595}}}`
+	var method9 CompatibleResult
+	err = json.Unmarshal([]byte(dataV5Result), &method9)
+	assert.Nil(t, err)
 }
 
 func ValueChecks(t *testing.T) {
