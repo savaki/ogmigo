@@ -21,8 +21,14 @@ import (
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync"
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/chainsync/num"
 	"github.com/SundaeSwap-finance/ogmigo/v6/ouroboros/shared"
+	"github.com/tj/assert"
 )
 
+// TODO:
+//   - break this up into smaller tests;
+//   - put strings in a test_data folder;
+//   - check the data we get to make sure it round tripped correctly
+//   - test dynamodb marshalling
 func TestCompatibleResult(t *testing.T) {
 	dataRequestNextForward := `{
         "RollForward": {
@@ -450,9 +456,7 @@ func TestCompatibleResult(t *testing.T) {
 
 	var method1 CompatibleResultNextBlock
 	err := json.Unmarshal([]byte(dataRequestNextForward), &method1)
-	if err != nil {
-		t.Fatalf("error unmarshalling response: %v", err)
-	}
+	assert.Nil(t, err)
 
 	dataRequestNextBackward := `{
         "RollBackward": {
@@ -470,9 +474,7 @@ func TestCompatibleResult(t *testing.T) {
 
 	var method2 chainsync.ResultNextBlockPraos
 	err = json.Unmarshal([]byte(dataRequestNextBackward), &method2)
-	if err != nil {
-		t.Fatalf("error unmarshalling response: %v", err)
-	}
+	assert.Nil(t, err)
 
 	dataNextBlockForward := `{
         "direction": "forward",
@@ -699,9 +701,7 @@ func TestCompatibleResult(t *testing.T) {
 
 	var method3 chainsync.ResultNextBlockPraos
 	err = json.Unmarshal([]byte(dataNextBlockForward), &method3)
-	if err != nil {
-		t.Fatalf("error unmarshalling response: %v", err)
-	}
+	assert.Nil(t, err)
 
 	dataNextBlockBackward := `{
         "direction": "backward",
@@ -718,9 +718,7 @@ func TestCompatibleResult(t *testing.T) {
 
 	var method4 chainsync.ResultNextBlockPraos
 	err = json.Unmarshal([]byte(dataNextBlockBackward), &method4)
-	if err != nil {
-		t.Fatalf("error unmarshalling response: %v", err)
-	}
+	assert.Nil(t, err)
 
 	dataFindIntersectFound := `{
         "IntersectionFound": {
@@ -735,9 +733,7 @@ func TestCompatibleResult(t *testing.T) {
 
 	var method5 CompatibleResultFindIntersection
 	err = json.Unmarshal([]byte(dataFindIntersectFound), &method5)
-	if err != nil {
-		t.Fatalf("error unmarshalling response: %v", err)
-	}
+	assert.Nil(t, err)
 
 	dataFindIntersectNotFound := `{
         "IntersectionNotFound": {
@@ -751,9 +747,7 @@ func TestCompatibleResult(t *testing.T) {
 
 	var method6 CompatibleResultFindIntersection
 	err = json.Unmarshal([]byte(dataFindIntersectNotFound), &method6)
-	if err != nil {
-		t.Fatalf("error unmarshalling response: %v", err)
-	}
+	assert.Nil(t, err)
 
 	dataFindIntersectionFound := `{
         "intersection": {
@@ -769,9 +763,7 @@ func TestCompatibleResult(t *testing.T) {
 
 	var method7 chainsync.ResultNextBlockPraos
 	err = json.Unmarshal([]byte(dataFindIntersectionFound), &method7)
-	if err != nil {
-		t.Fatalf("error unmarshalling response: %v", err)
-	}
+	assert.Nil(t, err)
 
 	dataFindIntersectionNotFound := `{
 		"error": {
@@ -789,9 +781,7 @@ func TestCompatibleResult(t *testing.T) {
 
 	var method8 chainsync.ResultNextBlockPraos
 	err = json.Unmarshal([]byte(dataFindIntersectionNotFound), &method8)
-	if err != nil {
-		t.Fatalf("error unmarshalling response: %v", err)
-	}
+	assert.Nil(t, err)
 }
 
 func ValueChecks(t *testing.T) {
